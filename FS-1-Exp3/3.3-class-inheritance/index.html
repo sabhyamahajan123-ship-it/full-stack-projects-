@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exp 3.3 - Class Inheritance & Polymorphism</title>
+    <style>
+        :root {
+            --bg: #030712;
+            --primary: #10b981;
+            --text: #f8fafc;
+        }
+
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Fira Code', monospace;
+            padding: 3rem;
+        }
+
+        .container { max-width: 800px; margin: 0 auto; }
+
+        .card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 1.5rem;
+            border-radius: 12px;
+            margin-bottom: 1.5rem;
+            border-left: 5px solid var(--primary);
+        }
+
+        .type {
+            font-size: 0.7rem;
+            color: #94a3b8;
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+        }
+
+        .name { font-size: 1.25rem; font-weight: 700; margin-bottom: 0.5rem; }
+        .info { color: #10b981; }
+
+        .controls { margin-bottom: 3rem; text-align: center; }
+        .btn {
+            background: var(--primary);
+            color: #000;
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-weight: 700;
+            cursor: pointer;
+            margin: 0 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header style="text-align:center; margin-bottom: 4rem;">
+            <h1>OOP <span>Polymorphism</span></h1>
+            <p>Class Hierarchy Implementation: Person → Student/Teacher</p>
+        </header>
+
+        <div class="controls">
+            <button class="btn" onclick="addInstance('Student')">+ Add Student</button>
+            <button class="btn" style="background:#6366f1" onclick="addInstance('Teacher')">+ Add Teacher</button>
+        </div>
+
+        <div id="displayArea">
+            <!-- Instances -->
+        </div>
+    </div>
+
+    <script>
+        // --- OOP CLASSES ---
+        class Person {
+            constructor(name, age) {
+                this.name = name;
+                this.age = age;
+            }
+            getInfo() { return `Generic Person: ${this.name}, ${this.age} years old.`; }
+        }
+
+        class Student extends Person {
+            constructor(name, age, gpa) {
+                super(name, age);
+                this.gpa = gpa;
+            }
+            // Method Overriding
+            getInfo() { return `Student Instance: Enrolled with GPA ${this.gpa}`; }
+        }
+
+        class Teacher extends Person {
+            constructor(name, age, subject) {
+                super(name, age);
+                this.subject = subject;
+            }
+            // Method Overriding
+            getInfo() { return `Teacher Instance: Specializing in ${this.subject}`; }
+        }
+
+        // --- UI LOGIC ---
+        const instances = [];
+
+        function addInstance(type) {
+            const names = ["Aarush", "Dev", "Isha", "Rahul", "Aisha"];
+            const name = names[Math.floor(Math.random() * names.length)];
+            const age = Math.floor(Math.random() * 30) + 20;
+
+            let obj;
+            if(type === 'Student') {
+                obj = new Student(name, age, (Math.random() * 1 + 3).toFixed(2));
+            } else {
+                obj = new Teacher(name, age, "Advanced Computing");
+            }
+
+            instances.unshift({ type, name, age, info: obj.getInfo() });
+            render();
+        }
+
+        function render() {
+            const area = document.getElementById('displayArea');
+            area.innerHTML = instances.map(i => `
+                <div class="card" style="border-left-color: ${i.type === 'Student' ? '#10b981' : '#6366f1'}">
+                    <div class="type">${i.type}</div>
+                    <div class="name">${i.name} (Age: ${i.age})</div>
+                    <div class="info">${i.info}</div>
+                </div>
+            `).join('');
+        }
+
+        // Initial setup
+        addInstance('Student');
+        addInstance('Teacher');
+    </script>
+</body>
+</html>

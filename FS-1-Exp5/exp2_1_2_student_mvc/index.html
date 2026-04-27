@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab 5.2 - Student MVC</title>
+    <link rel="stylesheet" href="../../lab.css">
+    <style>
+        .mvc-visualizer {
+            display: flex;
+            align-items: center;
+            justify-content: space-around;
+            padding: 2rem;
+            background: rgba(0,0,0,0.3);
+            border-radius: 15px;
+            margin-bottom: 2rem;
+        }
+        .node {
+            padding: 1rem;
+            border: 2px solid var(--primary);
+            border-radius: 10px;
+            text-align: center;
+            width: 120px;
+        }
+        .arrow { color: var(--text-muted); font-size: 1.5rem; }
+    </style>
+</head>
+<body>
+    <div class="lab-layout">
+        <aside class="sidebar">
+            <div class="header">
+                <h1>Lab 5.2</h1>
+                <p>MVC Design Pattern</p>
+            </div>
+            <div class="glass-card">
+                <h3>Controller Actions</h3>
+                <button class="btn" style="width:100%; margin-bottom:1rem" onclick="triggerAction('FETCH_ALL')">Get All Students</button>
+                <button class="btn" style="width:100%" onclick="triggerAction('CREATE')">Create Student</button>
+            </div>
+            <a href="../index.html" style="margin-top:auto; color: var(--primary); text-decoration: none; font-weight:600;">← Back to Hub</a>
+        </aside>
+
+        <main class="main-content">
+            <div class="mvc-visualizer">
+                <div class="node">VIEW<br>(EJS)</div>
+                <div class="arrow">↔</div>
+                <div class="node" id="activeNode">CONTROLLER</div>
+                <div class="arrow">↔</div>
+                <div class="node">MODEL<br>(Schema)</div>
+            </div>
+
+            <div class="glass-card">
+                <div id="status" style="margin-bottom:1rem; color:var(--primary)">System Idle...</div>
+                <div id="records" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem;">
+                    <!-- Students -->
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const students = [
+            { id: 1, name: "Aarush", roll: "101" },
+            { id: 2, name: "Isha", roll: "102" }
+        ];
+
+        function triggerAction(action) {
+            const status = document.getElementById('status');
+            const node = document.getElementById('activeNode');
+            
+            node.style.background = 'var(--primary)';
+            node.style.color = '#000';
+            status.innerText = `Controller executing: ${action}...`;
+
+            setTimeout(() => {
+                node.style.background = 'transparent';
+                node.style.color = 'inherit';
+                status.innerText = `Action ${action} completed by Model.`;
+                if(action === 'FETCH_ALL') render();
+                if(action === 'CREATE') {
+                    students.push({ id: Date.now(), name: "New Student", roll: Math.floor(Math.random()*900)+100 });
+                    render();
+                }
+            }, 800);
+        }
+
+        function render() {
+            document.getElementById('records').innerHTML = students.map(s => `
+                <div class="glass-card" style="margin:0; border-left: 3px solid var(--secondary)">
+                    <h4 style="margin:0">${s.name}</h4>
+                    <p style="margin:0; font-size:0.8rem">Roll: ${s.roll}</p>
+                </div>
+            `).join('');
+        }
+
+        render();
+    </script>
+</body>
+</html>

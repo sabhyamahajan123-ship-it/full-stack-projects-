@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab 5.3 - E-commerce Catalog</title>
+    <link rel="stylesheet" href="../../lab.css">
+</head>
+<body>
+    <div class="lab-layout">
+        <aside class="sidebar">
+            <div class="header">
+                <h1>Lab 5.3</h1>
+                <p>API Catalog Simulator</p>
+            </div>
+            <div class="glass-card">
+                <h3>Filter Products</h3>
+                <input type="text" id="filter" placeholder="Search title..." class="input-field" oninput="render()">
+            </div>
+            <div class="glass-card">
+                <h3>Cart Status</h3>
+                <div id="cartCount">0 Items</div>
+            </div>
+            <a href="../index.html" style="margin-top:auto; color: var(--primary); text-decoration: none; font-weight:600;">← Back to Hub</a>
+        </aside>
+
+        <main class="main-content">
+            <div class="glass-card">
+                <h2>Product Collection</h2>
+                <div id="catalog" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1.5rem; margin-top: 1.5rem;">
+                    <!-- Products -->
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const catalog = [
+            { id: 1, name: "Premium Hoodie", price: "1299" },
+            { id: 2, name: "Leather Wallet", price: "799" },
+            { id: 3, name: "Sneaker X", price: "2499" },
+            { id: 4, name: "Cotton Tee", price: "499" }
+        ];
+
+        let cart = 0;
+
+        function add() {
+            cart++;
+            document.getElementById('cartCount').innerText = `${cart} Items`;
+            alert('Added to simulated cart!');
+        }
+
+        function render() {
+            const query = document.getElementById('filter').value.toLowerCase();
+            document.getElementById('catalog').innerHTML = catalog
+                .filter(p => p.name.toLowerCase().includes(query))
+                .map(p => `
+                    <div class="glass-card" style="margin:0; border: 1px solid rgba(255,255,255,0.1)">
+                        <div style="height:120px; background:rgba(255,255,255,0.05); border-radius:10px; margin-bottom:1rem; display:flex; align-items:center; justify-content:center; font-size:3rem">📦</div>
+                        <h4 style="margin:0">${p.name}</h4>
+                        <p style="margin:0.5rem 0; color:var(--success)">₹${p.price}</p>
+                        <button class="btn" style="width:100%" onclick="add()">Add To Cart</button>
+                    </div>
+                `).join('');
+        }
+
+        render();
+    </script>
+</body>
+</html>

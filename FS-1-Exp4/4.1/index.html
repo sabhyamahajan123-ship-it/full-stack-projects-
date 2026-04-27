@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab 4.1 - Employee Management</title>
+    <link rel="stylesheet" href="../lab.css">
+</head>
+<body>
+    <div class="lab-layout">
+        <aside class="sidebar">
+            <div class="header">
+                <h1>Lab 4.1</h1>
+                <p>Employee Records Sync</p>
+            </div>
+            <div class="glass-card">
+                <h3>Input Employee Data</h3>
+                <input type="text" id="name" placeholder="John Doe" class="input-field">
+                <input type="text" id="pos" placeholder="Senior Architect" class="input-field">
+                <button class="btn" onclick="process()">Process Entry</button>
+            </div>
+            <a href="../index.html" style="margin-top:auto; color: var(--primary); text-decoration: none; font-weight:600;">← Back to Hub</a>
+        </aside>
+
+        <main class="main-content">
+            <div class="glass-card">
+                <h3>Simulated Node.js Runtime</h3>
+                <div class="console" id="log">
+                    <div class="line"><span class="timestamp">[18:05:01]</span> Module loaded: employee-management.js</div>
+                </div>
+            </div>
+
+            <div class="glass-card">
+                <h3>Processed Directory</h3>
+                <div id="directory" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem;">
+                    <!-- Data here -->
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const employees = [];
+
+        function process() {
+            const name = document.getElementById('name').value;
+            const pos = document.getElementById('pos').value;
+            if(!name || !pos) return;
+
+            const logger = document.getElementById('log');
+            logger.innerHTML += `<div>DEBUG: Parsing request for ${name}...</div>`;
+            
+            setTimeout(() => {
+                logger.innerHTML += `<div style="color:#22c55e">SUCCESS: Assigned record ID ${Math.floor(Math.random()*1000)}</div>`;
+                employees.unshift({ name, pos });
+                render();
+            }, 800);
+        }
+
+        function render() {
+            document.getElementById('directory').innerHTML = employees.map(e => `
+                <div class="glass-card" style="margin:0; border-left: 4px solid var(--primary)">
+                    <h4 style="margin:0">${e.name}</h4>
+                    <p style="margin:0; font-size:0.8rem">${e.pos}</p>
+                </div>
+            `).join('');
+        }
+    </script>
+</body>
+</html>

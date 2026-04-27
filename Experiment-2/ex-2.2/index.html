@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Category Filter</title>
+  <link rel="stylesheet" href="layout.css">
+</head>
+<body>
+
+<h2>Product Filter</h2>
+
+<select onchange="showItems(this.value)">
+  <option value="all">Show All</option>
+  <option value="tech">Electronics</option>
+  <option value="wear">Clothing</option>
+</select>
+
+<div class="items">
+  <div class="item tech">Laptop</div>
+  <div class="item wear">Jacket</div>
+  <div class="item tech">Headphones</div>
+  <div class="item wear">T-Shirt</div>
+</div>
+
+<script src="filter.js"></script>
+</body>
+</html>

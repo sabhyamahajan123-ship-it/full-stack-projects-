@@ -1,0 +1,17 @@
+config:
+  target: "http://localhost:3000"
+  phases:
+    - duration: 10
+      arrivalRate: 20
+      name: "Load test - concurrent booking"
+
+scenarios:
+  - name: "Book a seat"
+    flow:
+      - post:
+          url: "/api/book"
+          json: {}
+          expect:
+            - statusCode:
+                - 200
+                - 400

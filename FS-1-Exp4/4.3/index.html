@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab 4.3 - Booking System</title>
+    <link rel="stylesheet" href="../lab.css">
+</head>
+<body>
+    <div class="lab-layout">
+        <aside class="sidebar">
+            <div class="header">
+                <h1>Lab 4.3</h1>
+                <p>Booking API Simulator</p>
+            </div>
+            <div class="glass-card">
+                <h3>Schedule Appointment</h3>
+                <input type="text" id="client" placeholder="Client Name" class="input-field">
+                <input type="time" id="time" class="input-field">
+                <button class="btn" style="background:var(--success)" onclick="book()">Book Slot</button>
+            </div>
+            <a href="../index.html" style="margin-top:auto; color: var(--primary); text-decoration: none; font-weight:600;">← Back to Hub</a>
+        </aside>
+
+        <main class="main-content">
+            <div class="glass-card">
+                <h2>Active Bookings</h2>
+                <div id="bookings" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem; margin-top: 1.5rem;">
+                    <!-- Bookings -->
+                </div>
+            </div>
+            <div class="glass-card">
+                <h3>API Response Trace</h3>
+                <pre id="apiOut" style="background:#000; padding:1rem; border-radius:12px; color:var(--success); font-family:monospace; min-height:100px;">{}</pre>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        let bookings = JSON.parse(localStorage.getItem('exp4_bookings') || '[]');
+
+        function book() {
+            const client = document.getElementById('client').value;
+            const timeSlot = document.getElementById('time').value;
+            if(!client || !timeSlot) return;
+
+            const entry = { id: Date.now(), client, timeSlot };
+            bookings.push(entry);
+            
+            document.getElementById('apiOut').innerText = JSON.stringify({
+                status: "Success",
+                data: entry,
+                timestamp: new Date().toISOString()
+            }, null, 2);
+
+            save();
+            render();
+        }
+
+        function save() { localStorage.setItem('exp4_bookings', JSON.stringify(bookings)); }
+
+        function render() {
+            document.getElementById('bookings').innerHTML = bookings.map(b => `
+                <div class="glass-card" style="margin:0; border-top: 4px solid var(--success)">
+                    <div style="font-size:0.7rem; color:var(--text-muted)">${b.timeSlot}</div>
+                    <h4 style="margin:5px 0">${b.client}</h4>
+                </div>
+            `).join('');
+        }
+
+        render();
+    </script>
+</body>
+</html>

@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab 5.1 - Product CRUD</title>
+    <link rel="stylesheet" href="../../lab.css">
+</head>
+<body>
+    <div class="lab-layout">
+        <aside class="sidebar">
+            <div class="header">
+                <h1>Lab 5.1</h1>
+                <p>Mongoose CRUD Simulator</p>
+            </div>
+            <div class="glass-card">
+                <h3>New Product</h3>
+                <input type="text" id="pName" placeholder="Product Name" class="input-field">
+                <input type="number" id="pPrice" placeholder="Price (₹)" class="input-field">
+                <button class="btn" style="width:100%" onclick="create()">Add to Database</button>
+            </div>
+            <a href="../index.html" style="margin-top:auto; color: var(--primary); text-decoration: none; font-weight:600;">← Back to Hub</a>
+        </aside>
+
+        <main class="main-content">
+            <div class="glass-card">
+                <h3>Simulated Database (MongoDB Console)</h3>
+                <div class="console" id="log" style="height: 150px;">
+                    <div class="line"><span class="timestamp">[18:15:01]</span> Connected to mongodb://127.0.0.1/product_db</div>
+                </div>
+            </div>
+
+            <div class="glass-card">
+                <h3>Live Inventory</h3>
+                <div id="inventory" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem;">
+                    <!-- Data here -->
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        let products = JSON.parse(localStorage.getItem('exp5_products') || '[]');
+
+        function create() {
+            const name = document.getElementById('pName').value;
+            const price = document.getElementById('pPrice').value;
+            if(!name || !price) return;
+
+            const logger = document.getElementById('log');
+            logger.innerHTML += `<div>> POST /api/products (Saving to Mongoose)</div>`;
+            
+            setTimeout(() => {
+                products.unshift({ id: Date.now(), name, price });
+                document.getElementById('pName').value = '';
+                document.getElementById('pPrice').value = '';
+                save();
+                render();
+                logger.innerHTML += `<div style="color:var(--success)">> SUCCESS: Document saved successfully</div>`;
+                logger.scrollTop = logger.scrollHeight;
+            }, 500);
+        }
+
+        function remove(id) {
+            products = products.filter(p => p.id !== id);
+            save();
+            render();
+            document.getElementById('log').innerHTML += `<div style="color:var(--error)">> DELETE: Removed document ${id}</div>`;
+        }
+
+        function save() { localStorage.setItem('exp5_products', JSON.stringify(products)); }
+
+        function render() {
+            document.getElementById('inventory').innerHTML = products.map(p => `
+                <div class="glass-card" style="margin:0; border-top: 3px solid var(--primary)">
+                    <h4 style="margin:0">${p.name}</h4>
+                    <p style="margin:0; color:var(--success)">₹${p.price}</p>
+                    <button class="btn" style="margin-top:1rem; padding: 0.4rem; background:var(--error); font-size:0.7rem; width:100%" onclick="remove(${p.id})">Delete</button>
+                </div>
+            `).join('');
+        }
+
+        render();
+    </script>
+</body>
+</html>

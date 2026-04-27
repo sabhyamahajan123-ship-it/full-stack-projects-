@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Dashboard</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <h2>Admin Panel</h2>
+      <a href="#">Dashboard</a>
+      <a href="#">Users</a>
+      <a href="#">Reports</a>
+      <a href="#">Settings</a>
+    </aside>
+
+    <header class="header">
+      <div>
+        <h1>Dashboard</h1>
+        <p>CSS Grid layout + Dynamic theme switching</p>
+      </div>
+      <button class="btn" id="themeBtn">Toggle Theme</button>
+    </header>
+
+    <main class="content">
+      <section class="cards">
+        <div class="card">
+          <h3>Total Users</h3>
+          <div class="num">1,250</div>
+          <p class="muted">Active this month</p>
+        </div>
+        <div class="card">
+          <h3>Revenue</h3>
+          <div class="num">₹52,300</div>
+          <p class="muted">This month</p>
+        </div>
+        <div class="card">
+          <h3>Tickets</h3>
+          <div class="num">37</div>
+          <p class="muted">Pending</p>
+        </div>
+      </section>
+
+      <section class="table">
+        <h3>Recent Activity</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>User</th>
+              <th>Action</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>Rahul</td><td>Logged in</td><td>Success</td></tr>
+            <tr><td>Aisha</td><td>Updated profile</td><td>Success</td></tr>
+            <tr><td>Dev</td><td>Raised ticket</td><td>Pending</td></tr>
+          </tbody>
+        </table>
+      </section>
+    </main>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>

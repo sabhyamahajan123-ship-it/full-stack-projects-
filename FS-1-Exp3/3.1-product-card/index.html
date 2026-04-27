@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exp 3.1 - Product Card Component</title>
+    <style>
+        :root {
+            --bg: #030712;
+            --card-bg: rgba(31, 41, 55, 0.4);
+            --primary: #6366f1;
+            --secondary: #ec4899;
+            --text: #f8fafc;
+        }
+
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 2rem;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 2rem;
+            max-width: 1000px;
+            width: 100%;
+        }
+
+        .product-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            overflow: hidden;
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .product-card:hover {
+            transform: translateY(-10px);
+            border-color: var(--primary);
+        }
+
+        .image-container {
+            width: 100%;
+            height: 200px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 4rem;
+        }
+
+        .content {
+            padding: 1.5rem;
+        }
+
+        .category {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            color: var(--primary);
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.5rem;
+        }
+
+        .title {
+            font-size: 1.5rem;
+            font-weight: 800;
+            margin-bottom: 0.75rem;
+        }
+
+        .price {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #10b981;
+            margin-bottom: 1rem;
+        }
+
+        .status {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 99px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+        }
+
+        .status.in-stock { background: rgba(16, 185, 129, 0.1); color: #10b981; }
+        .status.out-stock { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
+
+        .btn {
+            width: 100%;
+            padding: 1rem;
+            border: none;
+            border-radius: 12px;
+            background: var(--primary);
+            color: white;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn:hover { background: #4f46e5; }
+        .btn:disabled { background: #1f2937; cursor: not-allowed; opacity: 0.5; }
+    </style>
+</head>
+<body>
+    <div class="grid" id="productGrid">
+        <!-- Cards will be rendered here -->
+    </div>
+
+    <script>
+        const products = [
+            { name: "Nebula Core", price: "₹24,999", category: "Hardware", icon: "💎", inStock: true },
+            { name: "Quantum Rig", price: "₹89,999", category: "PC Suite", icon: "🚀", inStock: false },
+            { name: "Flow Pro", price: "₹12,499", category: "Accessory", icon: "🎧", inStock: true }
+        ];
+
+        const grid = document.getElementById('productGrid');
+        
+        products.forEach(p => {
+            const card = document.createElement('div');
+            card.className = 'product-card';
+            card.innerHTML = `
+                <div class="image-container">${p.icon}</div>
+                <div class="content">
+                    <div class="category">${p.category}</div>
+                    <div class="title">${p.name}</div>
+                    <div class="price">${p.price}</div>
+                    <div class="status ${p.inStock ? 'in-stock' : 'out-stock'}">
+                        ${p.inStock ? '● In Stock' : '● Out of Stock'}
+                    </div>
+                    <button class="btn" ${!p.inStock ? 'disabled' : ''}>
+                        ${p.inStock ? 'Add to Cart' : 'Notify Me'}
+                    </button>
+                </div>
+            `;
+            grid.appendChild(card);
+        });
+    </script>
+</body>
+</html>

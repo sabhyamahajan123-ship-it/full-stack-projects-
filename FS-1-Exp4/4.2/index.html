@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab 4.2 - Express Routing</title>
+    <link rel="stylesheet" href="../lab.css">
+</head>
+<body>
+    <div class="lab-layout">
+        <aside class="sidebar">
+            <div class="header">
+                <h1>Lab 4.2</h1>
+                <p>Routing Logic Simulator</p>
+            </div>
+            <div class="glass-card">
+                <h3>Try Endpoints</h3>
+                <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                    <button class="btn" onclick="test('/')">GET / (Home)</button>
+                    <button class="btn" onclick="test('/api/info')">GET /api/info</button>
+                    <button class="btn" onclick="test('/admin')">GET /admin</button>
+                    <button class="btn" style="background:#ef4444" onclick="test('/error')">Simulate 500</button>
+                </div>
+            </div>
+            <a href="../index.html" style="margin-top:auto; color: var(--primary); text-decoration: none; font-weight:600;">← Back to Hub</a>
+        </aside>
+
+        <main class="main-content">
+            <div class="glass-card">
+                <h3>Live Server Trace</h3>
+                <div class="console" id="trace" style="height: 400px;">
+                    <div class="line"><span class="timestamp">[18:05:01]</span> Express server listening on PORT 3000</div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        function test(path) {
+            const trace = document.getElementById('trace');
+            const time = new Date().toLocaleTimeString();
+            trace.innerHTML += `<div><span class="timestamp">[${time}]</span> INCOMING REQUEST: GET ${path}</div>`;
+            
+            setTimeout(() => {
+                if(path === '/error') {
+                    trace.innerHTML += `<div style="color:var(--error)">ERROR: Unexpected token in server.js</div>`;
+                    trace.innerHTML += `<div style="color:var(--error)">RESPONSE: 500 Internal Server Error</div>`;
+                } else if(path === '/admin') {
+                    trace.innerHTML += `<div style="color:#fbbf24">AUTH: Anonymous user denied access to /admin</div>`;
+                    trace.innerHTML += `<div style="color:#fbbf24">RESPONSE: 403 Forbidden</div>`;
+                } else {
+                    trace.innerHTML += `<div style="color:var(--success)">MIDDLEWARE: Passed through Static & JSON parsers</div>`;
+                    trace.innerHTML += `<div style="color:var(--success)">RESPONSE: 200 OK (${path})</div>`;
+                }
+                trace.scrollTop = trace.scrollHeight;
+            }, 600);
+        }
+    </script>
+</body>
+</html>

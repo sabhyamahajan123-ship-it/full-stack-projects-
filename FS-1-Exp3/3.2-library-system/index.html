@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exp 3.2 - Library Management System</title>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --card: rgba(255, 255, 255, 0.03);
+            --primary: #f59e0b;
+            --text: #f1f5f9;
+        }
+
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 3rem;
+        }
+
+        .container { max-width: 1000px; margin: 0 auto; }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 3rem;
+            flex-wrap: wrap;
+            gap: 1.5rem;
+        }
+
+        h1 { font-size: 2.5rem; margin: 0; }
+
+        .search-box {
+            background: var(--card);
+            border: 1px solid rgba(255,255,255,0.1);
+            padding: 0.75rem 1.5rem;
+            border-radius: 12px;
+            color: white;
+            width: 300px;
+        }
+
+        .layout {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 3rem;
+        }
+
+        .form-panel {
+            background: var(--card);
+            padding: 2rem;
+            border-radius: 20px;
+            border: 1px solid rgba(255,255,255,0.05);
+            height: fit-content;
+        }
+
+        .input-group { margin-bottom: 1.5rem; }
+        .input-group label { display: block; margin-bottom: 0.5rem; font-size: 0.9rem; color: #94a3b8; }
+        .input-group input {
+            width: 100%;
+            padding: 0.75rem;
+            background: rgba(0,0,0,0.2);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 8px;
+            color: white;
+        }
+
+        .btn {
+            background: var(--primary);
+            color: #000;
+            width: 100%;
+            padding: 0.75rem;
+            border: none;
+            border-radius: 8px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .book-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .book-card {
+            background: var(--card);
+            padding: 1.5rem;
+            border-radius: 16px;
+            border: 1px solid rgba(255,255,255,0.05);
+            position: relative;
+        }
+
+        .book-card h4 { margin: 0 0 0.5rem 0; font-size: 1.2rem; }
+        .book-card p { color: #94a3b8; margin: 0; font-size: 0.9rem; }
+
+        .remove-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(239, 68, 68, 0.1);
+            color: #ef4444;
+            border: none;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+
+        @media (max-width: 800px) {
+            .layout { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Library <span>Core</span></h1>
+            <input type="text" class="search-box" id="searchInput" placeholder="Search books..." oninput="render()">
+        </header>
+
+        <div class="layout">
+            <div class="form-panel">
+                <h3>Add New Book</h3>
+                <div class="input-group">
+                    <label>Title</label>
+                    <input type="text" id="title" placeholder="To Kill a Mockingbird">
+                </div>
+                <div class="input-group">
+                    <label>Author</label>
+                    <input type="text" id="author" placeholder="Harper Lee">
+                </div>
+                <button class="btn" onclick="addBook()">Add to Collection</button>
+            </div>
+
+            <div class="book-grid" id="bookGrid">
+                <!-- Books -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let books = JSON.parse(localStorage.getItem('exp3_books') || '[{"id":1, "title": "The Great Gatsby", "author": "F. Scott Fitzgerald"}]');
+
+        function addBook() {
+            const title = document.getElementById('title').value;
+            const author = document.getElementById('author').value;
+            if(!title || !author) return;
+            
+            books.push({ id: Date.now(), title, author });
+            document.getElementById('title').value = '';
+            document.getElementById('author').value = '';
+            save();
+            render();
+        }
+
+        function removeBook(id) {
+            books = books.filter(b => b.id !== id);
+            save();
+            render();
+        }
+
+        function save() { localStorage.setItem('exp3_books', JSON.stringify(books)); }
+
+        function render() {
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            const grid = document.getElementById('bookGrid');
+            grid.innerHTML = books
+                .filter(b => b.title.toLowerCase().includes(search) || b.author.toLowerCase().includes(search))
+                .map(b => `
+                    <div class="book-card">
+                        <button class="remove-btn" onclick="removeBook(${b.id})">✕</button>
+                        <h4>${b.title}</h4>
+                        <p>${b.author}</p>
+                    </div>
+                `).join('');
+        }
+
+        render();
+    </script>
+</body>
+</html>
