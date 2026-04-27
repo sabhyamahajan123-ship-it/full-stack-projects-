@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab 9.1 - Docker React Lab</title>
+    <link rel="stylesheet" href="../../lab.css">
+    <style>
+        .docker-container {
+            border: 2px dashed var(--primary);
+            padding: 2rem;
+            border-radius: 20px;
+            background: rgba(0,0,0,0.4);
+            text-align: center;
+        }
+        .stage {
+            display: inline-block;
+            padding: 1rem;
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            margin: 1rem;
+            opacity: 0.3;
+            transition: all 0.5s;
+        }
+        .stage.active { opacity: 1; border-color: var(--primary); transform: scale(1.05); }
+    </style>
+</head>
+<body>
+    <div class="lab-layout">
+        <aside class="sidebar">
+            <div class="header">
+                <h1>Lab 9.1</h1>
+                <p>Docker Multi-Stage Build</p>
+            </div>
+            <div class="glass-card">
+                <h3>Control Panel</h3>
+                <button class="btn" style="width:100%; margin-bottom:1rem" onclick="runBuild()">Run Docker Build</button>
+                <div id="stats" style="font-size:0.8rem; color:var(--success)">Ready to build...</div>
+            </div>
+            <a href="../index.html" style="margin-top:auto; color: var(--primary); text-decoration: none; font-weight:600;">← Back to Hub</a>
+        </aside>
+
+        <main class="main-content">
+            <div class="docker-container">
+                <h2>Build Pipeline Visualization</h2>
+                <div class="stage" id="s1">STAGE 1: BUILD<br>(Node:18-Alpine)</div>
+                <div class="stage" id="s2">STAGE 2: PROD<br>(Nginx:Alpine)</div>
+                <div id="buildLogs" class="console" style="margin-top:2rem; text-align:left;">
+                    <div class="line">$ docker build -t react-app-pro .</div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        function runBuild() {
+            const logs = document.getElementById('buildLogs');
+            const s1 = document.getElementById('s1');
+            const s2 = document.getElementById('s2');
+            const stats = document.getElementById('stats');
+
+            logs.innerHTML += `<div>Step 1/6: FROM node:18-alpine...</div>`;
+            s1.classList.add('active');
+
+            setTimeout(() => {
+                logs.innerHTML += `<div>Step 3/6: RUN npm install...</div>`;
+                setTimeout(() => {
+                    logs.innerHTML += `<div>Step 5/6: FROM nginx:alpine...</div>`;
+                    s1.classList.remove('active');
+                    s2.classList.add('active');
+                    setTimeout(() => {
+                        logs.innerHTML += `<div style="color:var(--success)">Successfully built image: 24.5MB</div>`;
+                        stats.innerText = "Deployment Success!";
+                    }, 1000);
+                }, 1000);
+            }, 1000);
+        }
+    </script>
+</body>
+</html>

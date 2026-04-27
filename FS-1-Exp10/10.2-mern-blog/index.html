@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab 10.2 - MERN Blog Platform</title>
+    <link rel="stylesheet" href="../../lab.css">
+    <style>
+        .blog-post {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        .meta { font-size: 0.8rem; color: var(--primary); margin-bottom: 1rem; }
+        .comment-box { border-top: 1px solid var(--border); margin-top: 1.5rem; padding-top: 1rem; }
+        .comment { font-size: 0.85rem; padding: 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.05); }
+    </style>
+</head>
+<body>
+    <div class="lab-layout">
+        <aside class="sidebar" id="authSide">
+            <!-- Auth or Dashboard -->
+        </aside>
+
+        <main class="main-content">
+            <div id="feed">
+                <!-- Posts -->
+            </div>
+        </main>
+    </div>
+
+    <script>
+        let user = JSON.parse(localStorage.getItem('blog_user'));
+        let posts = JSON.parse(localStorage.getItem('blog_posts') || '[]');
+
+        function authUI() {
+            const side = document.getElementById('authSide');
+            if(!user) {
+                side.innerHTML = `
+                    <div class="header"><h1>Blog Hub</h1><p>Welcome back</p></div>
+                    <div class="glass-card">
+                        <h3>Simulated Auth (JWT)</h3>
+                        <input type="text" id="uName" placeholder="Username" class="input-field">
+                        <button class="btn" style="width:100%" onclick="login()">Login</button>
+                    </div>
+                `;
+            } else {
+                side.innerHTML = `
+                    <div class="header"><h1>Dashboard</h1><p>Role: Author</p></div>
+                    <div class="glass-card">
+                        <h3>Create Post</h3>
+                        <input type="text" id="pTitle" placeholder="Title" class="input-field">
+                        <textarea id="pBody" class="input-field" placeholder="Content..."></textarea>
+                        <button class="btn" style="width:100%" onclick="createPost()">Submit Post</button>
+                        <button class="btn" style="width:100%; margin-top:1rem; background:var(--error)" onclick="logout()">Logout</button>
+                    </div>
+                    <a href="../index.html" style="margin-top:auto; color: var(--primary); text-decoration: none; font-weight:600;">← Back to Hub</a>
+                `;
+            }
+        }
+
+        function login() {
+            const name = document.getElementById('uName').value;
+            if(!name) return;
+            user = { name, token: "eyJhbG..." };
+            localStorage.setItem('blog_user', JSON.stringify(user));
+            authUI();
+            render();
+        }
+
+        function logout() { user = null; localStorage.removeItem('blog_user'); authUI(); render(); }
+
+        function createPost() {
+            const title = document.getElementById('pTitle').value;
+            const content = document.getElementById('pBody').value;
+            if(!title || !content) return;
+            posts.unshift({ id: Date.now(), title, content, author: user.name, comments: [] });
+            localStorage.setItem('blog_posts', JSON.stringify(posts));
+            render();
+        }
+
+        function render() {
+            const feed = document.getElementById('feed');
+            feed.innerHTML = posts.map(p => `
+                <div class="blog-post">
+                    <div class="meta">By ${p.author} • ${new Date(p.id).toLocaleDateString()}</div>
+                    <h2>${p.title}</h2>
+                    <p>${p.content}</p>
+                    <div class="comment-box">
+                        <h4 style="margin-bottom:1rem">Comments (${p.comments.length})</h4>
+                        ${p.comments.map(c => `<div class="comment"><b>${c.user}:</b> ${c.text}</div>`).join('')}
+                        ${user ? `<div style="display:flex; gap:0.5rem; margin-top:1rem">
+                            <input type="text" class="input-field" style="margin:0" id="com_${p.id}" placeholder="Write a comment...">
+                            <button class="btn" onclick="addComment(${p.id})">Post</button>
+                        </div>` : ''}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function addComment(pid) {
+            const text = document.getElementById(`com_${pid}`).value;
+            if(!text) return;
+            posts = posts.map(p => p.id === pid ? {...p, comments: [...p.comments, {user: user.name, text}]} : p);
+            localStorage.setItem('blog_posts', JSON.stringify(posts));
+            render();
+        }
+
+        authUI(); render();
+    </script>
+</body>
+</html>

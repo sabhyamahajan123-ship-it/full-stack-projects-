@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab 9.3 - AWS Infrastructure Lab</title>
+    <link rel="stylesheet" href="../../lab.css">
+    <style>
+        .aws-console {
+            background: #232f3e;
+            padding: 1.5rem;
+            border-radius: 12px;
+            color: #fff;
+        }
+        .resource-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.5rem;
+            margin-top: 2rem;
+        }
+        .resource {
+            background: rgba(255,255,255,0.1);
+            padding: 1rem;
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.2);
+            text-align: center;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            background: #10b981;
+            font-size: 0.7rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="lab-layout">
+        <aside class="sidebar">
+            <div class="header">
+                <h1>Lab 9.3</h1>
+                <p>AWS Cloud Scale</p>
+            </div>
+            <div class="glass-card">
+                <h3>Load Test Control</h3>
+                <button class="btn" style="width:100%" onclick="spawnInstances()">Scale Up Deployment</button>
+            </div>
+            <a href="../index.html" style="margin-top:auto; color: var(--primary); text-decoration: none; font-weight:600;">← Back to Hub</a>
+        </aside>
+
+        <main class="main-content">
+            <div class="aws-console">
+                <h2>Elastic Container Service (ECS)</h2>
+                <p>Service Status: <span class="status-badge">Active</span></p>
+
+                <div class="resource-grid" id="instanceGrid">
+                    <div class="resource">EC2 Instance (ID: i-0abc)<br><span class="status-badge">Running</span></div>
+                </div>
+            </div>
+
+            <div class="glass-card" style="margin-top:2rem;">
+                <h3>Terraform Manifest</h3>
+                <pre style="background:#000; padding:1.5rem; border-radius:12px; color:#f59e0b; font-family:monospace; overflow-x:auto;">
+resource "aws_autoscaling_group" "app_asg" {
+  desired_capacity = 2
+  max_size         = 5
+  min_size         = 1
+  vpc_zone_identifier = [aws_subnet.public.id]
+}</pre>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        let count = 1;
+        function spawnInstances() {
+            if(count >= 6) return;
+            count++;
+            const grid = document.getElementById('instanceGrid');
+            const res = document.createElement('div');
+            res.className = 'resource';
+            res.innerHTML = `EC2 Instance (ID: i-${Math.random().toString(16).substr(2,4)})<br><span class="status-badge" style="background:#6366f1">Provisioning...</span>`;
+            grid.appendChild(res);
+
+            setTimeout(() => {
+                res.querySelector('.status-badge').style.background = '#10b981';
+                res.querySelector('.status-badge').innerText = 'Running';
+            }, 1500);
+        }
+    </script>
+</body>
+</html>

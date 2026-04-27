@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab 10.3 - Social Media Platform</title>
+    <link rel="stylesheet" href="../../lab.css">
+    <style>
+        .social-post {
+            background: var(--card-bg);
+            border-radius: 20px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            border: 1px solid var(--border);
+        }
+        .user-head { display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; }
+        .avatar { width: 40px; height: 40px; background: var(--primary); border-radius: 50%; }
+        .post-img { width: 100%; height: 250px; background: #1f2937; border-radius: 12px; margin: 1rem 0; display: flex; align-items:center; justify-content:center; color: #4b5563; }
+        .actions { display: flex; gap: 1.5rem; border-top: 1px solid var(--border); padding-top: 1rem; }
+        .action-btn { color: var(--text-muted); cursor: pointer; display: flex; align-items: center; gap: 0.5rem; }
+        .action-btn.liked { color: #f43f5e; }
+    </style>
+</head>
+<body>
+    <div class="lab-layout">
+        <aside class="sidebar">
+            <div class="header">
+                <h1>Social <span>Net</span></h1>
+                <p>AWS Hybrid Deployment</p>
+            </div>
+            <div class="glass-card">
+                <h3>New Post</h3>
+                <textarea id="postText" class="input-field" placeholder="What's happening?"></textarea>
+                <button class="btn" style="width:100%" onclick="addPost()">Post to Feed</button>
+            </div>
+            <div class="glass-card">
+                <h3>Cloud Status</h3>
+                <div style="font-size:0.8rem; color:var(--success)">● AWS ECS Cluster: Healthy</div>
+                <div style="font-size:0.8rem; color:var(--success)">● DynamoDB: Connected</div>
+            </div>
+            <a href="../index.html" style="margin-top:auto; color: var(--primary); text-decoration: none; font-weight:600;">← Back to Hub</a>
+        </aside>
+
+        <main class="main-content">
+            <div id="socialFeed">
+                <!-- Posts -->
+            </div>
+        </main>
+    </div>
+
+    <script>
+        let pFeed = JSON.parse(localStorage.getItem('social_feed') || '[]');
+
+        function addPost() {
+            const text = document.getElementById('postText').value;
+            if(!text) return;
+            pFeed.unshift({ id: Date.now(), text, likes: 0, liked: false, user: "Aarush_Dev" });
+            document.getElementById('postText').value = '';
+            save();
+            render();
+        }
+
+        function toggleLike(id) {
+            pFeed = pFeed.map(p => {
+                if(p.id === id) {
+                    const liked = !p.liked;
+                    return { ...p, liked, likes: liked ? p.likes + 1 : p.likes - 1 };
+                }
+                return p;
+            });
+            save();
+            render();
+        }
+
+        function save() { localStorage.setItem('social_feed', JSON.stringify(pFeed)); }
+
+        function render() {
+            document.getElementById('socialFeed').innerHTML = pFeed.map(p => `
+                <div class="social-post">
+                    <div class="user-head">
+                        <div class="avatar"></div>
+                        <div><b>${p.user}</b><div style="font-size:0.7rem; color:var(--text-muted)">Posted on AWS Cloud</div></div>
+                    </div>
+                    <div>${p.text}</div>
+                    <div class="post-img">🖼️ [Image Component]</div>
+                    <div class="actions">
+                        <div class="action-btn ${p.liked ? 'liked' : ''}" onclick="toggleLike(${p.id})">
+                            ❤ ${p.likes}
+                        </div>
+                        <div class="action-btn">💬 Comment</div>
+                        <div class="action-btn">⚡ Share</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+        render();
+    </script>
+</body>
+</html>

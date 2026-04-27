@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab 10.1 - MERN Todo</title>
+    <link rel="stylesheet" href="../../lab.css">
+    <style>
+        .todo-item {
+            display: flex;
+            align-items: center;
+            padding: 1rem;
+            background: rgba(255,255,255,0.03);
+            border-radius: 12px;
+            margin-bottom: 0.75rem;
+            transition: all 0.3s;
+        }
+        .todo-item.completed { opacity: 0.5; text-decoration: line-through; border-left: 4px solid var(--success); }
+        .todo-item:not(.completed) { border-left: 4px solid var(--primary); }
+    </style>
+</head>
+<body>
+    <div class="lab-layout">
+        <aside class="sidebar">
+            <div class="header">
+                <h1>MERN <span>Todo</span></h1>
+                <p>Full-Stack CRUD Lab</p>
+            </div>
+            <div class="glass-card">
+                <h3>Create New Task</h3>
+                <input type="text" id="todoIn" placeholder="Buy milk..." class="input-field">
+                <button class="btn" style="width:100%" onclick="addTodo()">Save to MongoDB</button>
+            </div>
+            <a href="../index.html" style="margin-top:auto; color: var(--primary); text-decoration: none; font-weight:600;">← Back to Hub</a>
+        </aside>
+
+        <main class="main-content">
+            <div class="glass-card">
+                <h2>Active Tasks</h2>
+                <div id="todoList" style="margin-top:2rem;">
+                    <!-- List -->
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        let todos = JSON.parse(localStorage.getItem('m_todo') || '[]');
+
+        function addTodo() {
+            const val = document.getElementById('todoIn').value;
+            if(!val) return;
+            todos.unshift({ id: Date.now(), text: val, complete: false });
+            document.getElementById('todoIn').value = '';
+            save();
+            render();
+        }
+
+        function toggle(id) {
+            todos = todos.map(t => t.id === id ? {...t, complete: !t.complete} : t);
+            save();
+            render();
+        }
+
+        function del(id) {
+            if(!confirm('Permanently delete from database?')) return;
+            todos = todos.filter(t => t.id !== id);
+            save();
+            render();
+        }
+
+        function save() { localStorage.setItem('m_todo', JSON.stringify(todos)); }
+
+        function render() {
+            document.getElementById('todoList').innerHTML = todos.map(t => `
+                <div class="todo-item ${t.complete ? 'completed' : ''}">
+                    <input type="checkbox" ${t.complete ? 'checked' : ''} onchange="toggle(${t.id})" style="margin-right:1rem">
+                    <span style="flex:1">${t.text}</span>
+                    <button class="btn" style="padding:0.3rem 0.6rem; background:var(--error); font-size:0.7rem;" onclick="del(${t.id})">Delete</button>
+                </div>
+            `).join('');
+        }
+        render();
+    </script>
+</body>
+</html>

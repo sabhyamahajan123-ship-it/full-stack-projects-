@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab 9.2 - CI/CD Pipeline Simulator</title>
+    <link rel="stylesheet" href="../../lab.css">
+    <style>
+        .pipeline-track {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            background: rgba(255,255,255,0.05);
+            padding: 2rem;
+            border-radius: 20px;
+        }
+        .step-node {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            border: 3px solid #374151;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            font-size: 0.8rem;
+            transition: all 0.5s;
+        }
+        .step-node.success { border-color: var(--success); background: rgba(34, 197, 94, 0.1); }
+        .step-node.running { border-color: var(--primary); animation: pulse 1s infinite; }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+    </style>
+</head>
+<body>
+    <div class="lab-layout">
+        <aside class="sidebar">
+            <div class="header">
+                <h1>Lab 9.2</h1>
+                <p>Automated CI/CD</p>
+            </div>
+            <div class="glass-card">
+                <h3>Actions Controller</h3>
+                <button class="btn" style="width:100%" onclick="startPipeline()">Push to Main</button>
+            </div>
+            <a href="../index.html" style="margin-top:auto; color: var(--primary); text-decoration: none; font-weight:600;">← Back to Hub</a>
+        </aside>
+
+        <main class="main-content">
+            <div class="pipeline-track">
+                <div class="step-node" id="n1">TEST</div>
+                <div style="font-size:2rem">→</div>
+                <div class="step-node" id="n2">BUILD</div>
+                <div style="font-size:2rem">→</div>
+                <div class="step-node" id="n3">PUSH</div>
+                <div style="font-size:2rem">→</div>
+                <div class="step-node" id="n4">BOT</div>
+            </div>
+
+            <div class="glass-card" style="margin-top:2rem;">
+                <h3>Job Logs</h3>
+                <div class="console" id="jobLogs" style="height:250px">
+                    <div class="line">Listening for repository events...</div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        function startPipeline() {
+            const logs = document.getElementById('jobLogs');
+            logs.innerHTML += `<div>[Event] Push detected on branch 'main'</div>`;
+            
+            const steps = [
+                {id: 'n1', text: 'Running Vitest... Success'},
+                {id: 'n2', text: 'Building Docker image... Done'},
+                {id: 'n3', text: 'Pushing to GHCR... Registry ready'},
+                {id: 'n4', text: 'Slack Notification sent!'}
+            ];
+
+            let i = 0;
+            const runNext = () => {
+                if(i >= steps.length) return;
+                const node = document.getElementById(steps[i].id);
+                node.className = 'step-node running';
+                
+                setTimeout(() => {
+                    node.className = 'step-node success';
+                    logs.innerHTML += `<div>${steps[i].text}</div>`;
+                    i++;
+                    runNext();
+                }, 1200);
+            };
+            runNext();
+        }
+    </script>
+</body>
+</html>
