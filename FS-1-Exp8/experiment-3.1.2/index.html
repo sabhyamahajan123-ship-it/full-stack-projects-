@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Exp 3.1.2 — JWT Protected Routes</title>
+<link rel="stylesheet" href="../lab.css">
+<style>
+  .page-sim { border:1px solid rgba(255,255,255,.08); border-radius:14px; overflow:hidden; }
+  .app-topbar { background:rgba(17,24,39,.9); padding:12px 20px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,.06); }
+  .app-logo { font-weight:700; color:#a5b4fc; font-size:.95rem; }
+  .nav-links { display:flex; gap:14px; }
+  .nav-link { font-size:.8rem; color:#94a3b8; text-decoration:none; cursor:pointer; padding:4px 8px; border-radius:6px; transition:.2s; }
+  .nav-link:hover,.nav-link.active { color:#e2e8f0; background:rgba(255,255,255,.06); }
+  .app-page { min-height:280px; padding:30px; background:rgba(0,0,0,.2); display:flex; align-items:center; justify-content:center; }
+  .protected-lock { text-align:center; }
+  .lock-icon { font-size:3rem; margin-bottom:10px; }
+  .lock-msg { color:#f87171; font-size:.95rem; margin-bottom:6px; }
+  .lock-hint { color:#64748b; font-size:.8rem; }
+  .route-pill { display:inline-block; font-family:monospace; font-size:.78rem; background:rgba(99,102,241,.15); border:1px solid rgba(99,102,241,.3); padding:3px 10px; border-radius:10px; color:#a5b4fc; margin-bottom:10px; }
+  .user-card { background:rgba(52,211,153,.06); border:1px solid rgba(52,211,153,.2); border-radius:12px; padding:24px; text-align:center; }
+  .uc-avatar { font-size:2.5rem; margin-bottom:8px; }
+  .uc-name { font-size:1.1rem; font-weight:700; color:#34d399; }
+  .uc-role { font-size:.8rem; color:#64748b; margin-top:3px; }
+  .uc-meta { font-size:.75rem; color:#94a3b8; margin-top:10px; }
+  .interceptor-log { font-family:monospace; font-size:.75rem; background:#0a0a0a; border-radius:8px; padding:12px; max-height:120px; overflow-y:auto; }
+  .il-row { margin:3px 0; }
+  .il-req { color:#38bdf8; }
+  .il-ok { color:#34d399; }
+  .il-401 { color:#fbbf24; }
+  .il-err { color:#f87171; }
+  .login-compact { max-width:340px; margin:0 auto; text-align:center; }
+</style>
+</head>
+<body>
+<div class="lab-container">
+  <a href="../index.html" class="back-btn">← Back to Hub</a>
+  <div class="lab-header">
+    <div class="exp-badge">Exp 3.1.2</div>
+    <h1>JWT Protected Routes</h1>
+    <p>React Router · Axios Interceptors · Auto-logout · Token Refresh</p>
+  </div>
+
+  <!-- App Simulator -->
+  <div class="lab-card">
+    <h2 class="card-title">🖥️ App Simulator</h2>
+    <div class="page-sim">
+      <div class="app-topbar">
+        <div class="app-logo">🔐 SecureApp</div>
+        <div class="nav-links">
+          <span class="nav-link" onclick="navigate('home')">Home</span>
+          <span class="nav-link" onclick="navigate('dashboard')">Dashboard</span>
+          <span class="nav-link" onclick="navigate('profile')">Profile</span>
+          <span class="nav-link" onclick="navigate('admin')">Admin</span>
+        </div>
+        <div id="authBtn">
+          <button class="lab-btn" style="padding:5px 14px;font-size:.8rem;" onclick="openLogin()">Login</button>
+        </div>
+      </div>
+      <div class="app-page" id="appPage">
+        <div style="text-align:center;">
+          <div style="font-size:2rem;margin-bottom:10px;">🏠</div>
+          <div style="font-size:1rem;font-weight:600;color:#e2e8f0;">Home Page</div>
+          <div style="color:#64748b;font-size:.82rem;margin-top:6px;">Public route — accessible to everyone</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Login Modal -->
+  <div class="lab-card" id="loginModal" style="display:none">
+    <h2 class="card-title">🔑 Login</h2>
+    <div class="login-compact">
+      <div style="margin-bottom:12px;font-size:.8rem;color:#64748b;">Use: <strong>admin / password123</strong> or <strong>user / user123</strong></div>
+      <input id="lu2" class="lab-input" placeholder="Username" style="width:100%;margin-bottom:8px;" value="admin">
+      <input id="lp2" class="lab-input" type="password" placeholder="Password" style="width:100%;margin-bottom:10px;" value="password123">
+      <div style="display:flex;gap:8px;justify-content:center;">
+        <button class="lab-btn" onclick="doLogin()">Login</button>
+        <button class="lab-btn" style="background:rgba(255,255,255,.05);color:#94a3b8;" onclick="cancelLogin()">Cancel</button>
+      </div>
+      <div id="loginErr" style="color:#f87171;font-size:.8rem;margin-top:8px;"></div>
+    </div>
+  </div>
+
+  <!-- Axios Interceptor Log -->
+  <div class="lab-card">
+    <h2 class="card-title">📡 Axios Interceptor Log</h2>
+    <div class="interceptor-log" id="interceptorLog">
+      <div class="il-row il-req">// Axios interceptor attached — watching all requests</div>
+    </div>
+  </div>
+</div>
+
+<script>
+const USERS = {
+  admin: { pass:'password123', name:'Admin User', role:'admin', email:'admin@test.com' },
+  user:  { pass:'user123',     name:'John Doe',   role:'user',  email:'user@test.com'  }
+};
+let currentUser = null, jwtToken = null;
+const PROTECTED = { dashboard:true, profile:true, admin:'admin' };
+
+function log(type, msg) {
+  const el = document.getElementById('interceptorLog');
+  const d = document.createElement('div');
+  d.className = `il-row il-${type}`;
+  d.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+  el.appendChild(d);
+  el.scrollTop = el.scrollHeight;
+}
+
+function openLogin() { document.getElementById('loginModal').style.display='block'; }
+function cancelLogin() { document.getElementById('loginModal').style.display='none'; }
+
+function doLogin() {
+  const u = document.getElementById('lu2').value;
+  const p = document.getElementById('lp2').value;
+  const userData = USERS[u];
+  if (!userData || userData.pass !== p) {
+    document.getElementById('loginErr').textContent = '❌ Invalid credentials';
+    log('401', `POST /api/auth/login → 401 Unauthorized`);
+    return;
+  }
+  currentUser = {...userData, username:u};
+  jwtToken = 'eyJhbGci...' + btoa(u+Date.now()).replace(/=/g,'').substring(0,12);
+  log('ok', `POST /api/auth/login → 200 OK — JWT issued`);
+  log('ok', `Interceptor: Bearer token stored — attached to all future requests`);
+  document.getElementById('loginModal').style.display='none';
+  document.getElementById('authBtn').innerHTML =
+    `<div style="display:flex;align-items:center;gap:8px;font-size:.8rem;color:#94a3b8;">Logged in as <strong style="color:#a5b4fc">${u}</strong> <button class="lab-btn" style="padding:3px 10px;font-size:.75rem;" onclick="doLogout()">Logout</button></div>`;
+  navigate('dashboard');
+}
+
+function doLogout() {
+  currentUser = null; jwtToken = null;
+  log('il-req', 'Interceptor: Token cleared — user logged out');
+  document.getElementById('authBtn').innerHTML = `<button class="lab-btn" style="padding:5px 14px;font-size:.8rem;" onclick="openLogin()">Login</button>`;
+  navigate('home');
+}
+
+function navigate(page) {
+  document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+  const appPage = document.getElementById('appPage');
+
+  if (PROTECTED[page]) {
+    log('req', `GET /${page} → Interceptor: checking token...`);
+    if (!jwtToken) {
+      log('401', `GET /${page} → 401 Unauthorized — redirecting to login`);
+      appPage.innerHTML = `<div class="protected-lock"><div class="lock-icon">🔒</div><div class="route-pill">/${page}</div><div class="lock-msg">Protected Route — Authentication Required</div><div class="lock-hint">React Router redirected to /login</div><br><button class="lab-btn" onclick="openLogin()" style="margin-top:8px;">Login to Access</button></div>`;
+      return;
+    }
+    if (PROTECTED[page] === 'admin' && currentUser.role !== 'admin') {
+      log('err', `GET /${page} → 403 Forbidden — insufficient role (${currentUser.role})`);
+      appPage.innerHTML = `<div class="protected-lock"><div class="lock-icon">🚫</div><div class="route-pill">/${page}</div><div class="lock-msg">403 — Access Forbidden</div><div class="lock-hint">Admin role required. Your role: ${currentUser.role}</div></div>`;
+      return;
+    }
+    log('ok', `GET /${page} → 200 OK — JWT valid`);
+  }
+
+  const pages = {
+    home: `<div style="text-align:center;"><div style="font-size:2rem;margin-bottom:10px;">🏠</div><div style="font-size:1rem;font-weight:600;color:#e2e8f0;">Home Page</div><div style="color:#64748b;font-size:.82rem;margin-top:6px;">Public route — accessible to everyone</div></div>`,
+    dashboard: currentUser ? `<div class="user-card"><div class="uc-avatar">📊</div><div class="uc-name">Dashboard</div><div class="uc-role">Welcome, ${currentUser.name}!</div><div class="uc-meta">Role: ${currentUser.role.toUpperCase()} · Email: ${currentUser.email}</div></div>` : '',
+    profile: currentUser ? `<div class="user-card"><div class="uc-avatar">👤</div><div class="uc-name">${currentUser.name}</div><div class="uc-role">${currentUser.email}</div><div class="uc-meta">JWT Token: ${jwtToken}...</div></div>` : '',
+    admin: `<div class="user-card"><div class="uc-avatar">⚙️</div><div class="uc-name">Admin Panel</div><div class="uc-role">All users • System logs • Config</div><div class="uc-meta">Only accessible to admin role</div></div>`,
+  };
+  appPage.innerHTML = pages[page] || '';
+}
+</script>
+</body>
+</html>

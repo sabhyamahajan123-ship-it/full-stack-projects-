@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Exp 2.3.2 — Redux Shopping Cart</title>
+<link rel="stylesheet" href="../lab.css">
+<style>
+  .shop-layout { display:grid; grid-template-columns:1fr 340px; gap:16px; }
+  @media(max-width:768px){.shop-layout{grid-template-columns:1fr;}}
+  .prod-list { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .shop-item { background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); border-radius:10px; padding:14px; transition:.2s; }
+  .shop-item:hover { border-color:rgba(99,102,241,.4); }
+  .si-name { font-weight:600; font-size:.88rem; color:#e2e8f0; }
+  .si-price { color:#34d399; font-size:1rem; font-weight:700; margin:4px 0; }
+  .si-cat { font-size:.7rem; color:#64748b; }
+  .add-btn { background:rgba(99,102,241,.2); color:#a5b4fc; border:1px solid rgba(99,102,241,.3); border-radius:6px; padding:5px 12px; font-size:.78rem; cursor:pointer; width:100%; margin-top:8px; transition:.2s; }
+  .add-btn:hover { background:rgba(99,102,241,.4); color:#fff; }
+  .cart-panel { background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); border-radius:12px; padding:16px; height:fit-content; position:sticky; top:20px; }
+  .cart-panel h3 { color:#a5b4fc; margin-bottom:12px; font-size:.95rem; }
+  .cart-item { display:flex; align-items:center; gap:8px; padding:8px 0; border-bottom:1px solid rgba(255,255,255,.05); }
+  .ci-name { flex:1; font-size:.8rem; color:#e2e8f0; }
+  .ci-price { font-size:.8rem; color:#34d399; font-weight:600; width:60px; text-align:right; }
+  .qty-controls { display:flex; align-items:center; gap:4px; }
+  .qty-btn { background:rgba(255,255,255,.08); border:none; color:#e2e8f0; width:22px; height:22px; border-radius:4px; cursor:pointer; font-size:.85rem; display:flex; align-items:center; justify-content:center; transition:.2s; }
+  .qty-btn:hover { background:rgba(99,102,241,.3); }
+  .qty-num { font-size:.8rem; color:#e2e8f0; min-width:18px; text-align:center; }
+  .cart-total { border-top:1px solid rgba(255,255,255,.1); margin-top:10px; padding-top:10px; }
+  .total-row { display:flex; justify-content:space-between; font-size:.85rem; margin-bottom:4px; color:#94a3b8; }
+  .total-final { display:flex; justify-content:space-between; font-weight:700; color:#e2e8f0; font-size:1rem; margin-top:6px; }
+  .checkout-btn { background:linear-gradient(135deg,#6366f1,#8b5cf6); color:#fff; border:none; border-radius:8px; padding:10px; width:100%; font-weight:600; cursor:pointer; margin-top:10px; font-size:.88rem; transition:.2s; }
+  .checkout-btn:hover { opacity:.85; }
+  .redux-badge { background:rgba(99,102,241,.15); border:1px solid rgba(99,102,241,.3); border-radius:6px; padding:6px 12px; font-size:.72rem; color:#a5b4fc; font-family:monospace; margin-bottom:10px; }
+  .empty-cart { text-align:center; padding:20px; color:#64748b; font-size:.85rem; }
+</style>
+</head>
+<body>
+<div class="lab-container">
+  <a href="../index.html" class="back-btn">← Back to Hub</a>
+  <div class="lab-header">
+    <div class="exp-badge">Exp 2.3.2</div>
+    <h1>Redux Shopping Cart</h1>
+    <p>Redux Toolkit · createSlice · localStorage Persistence</p>
+  </div>
+
+  <div class="redux-badge" style="margin-bottom:16px;">🔴 Redux Store: <span id="storeState">{ cart: [], total: ₹0, itemCount: 0 }</span></div>
+
+  <div class="shop-layout">
+    <!-- Products -->
+    <div class="lab-card">
+      <h2 class="card-title">🛍️ Products</h2>
+      <div class="prod-list" id="productList"></div>
+    </div>
+
+    <!-- Cart Panel -->
+    <div class="cart-panel">
+      <h3>🛒 Cart (<span id="cartCount">0</span> items)</h3>
+      <div id="cartItems"><div class="empty-cart">Your cart is empty</div></div>
+      <div class="cart-total" id="cartTotal" style="display:none">
+        <div class="total-row"><span>Subtotal</span><span id="subtotal">₹0</span></div>
+        <div class="total-row"><span>GST (18%)</span><span id="gst">₹0</span></div>
+        <div class="total-final"><span>Total</span><span id="grandTotal">₹0</span></div>
+        <button class="checkout-btn" onclick="checkout()">Checkout →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const PRODUCTS = [
+  {id:1,name:'Wireless Earbuds',price:1499,category:'Electronics'},
+  {id:2,name:'Smart Watch',price:3999,category:'Electronics'},
+  {id:3,name:'Casual T-Shirt',price:599,category:'Clothing'},
+  {id:4,name:'Running Shoes',price:2200,category:'Footwear'},
+  {id:5,name:'Python Cookbook',price:999,category:'Books'},
+  {id:6,name:'Yoga Mat Pro',price:1200,category:'Sports'},
+  {id:7,name:'Coffee Mug',price:349,category:'Home'},
+  {id:8,name:'Desk Lamp',price:799,category:'Home'},
+];
+
+let cart = JSON.parse(localStorage.getItem('exp232_cart') || '[]');
+
+function saveCart() {
+  localStorage.setItem('exp232_cart', JSON.stringify(cart));
+  updateStoreDisplay();
+}
+
+function updateStoreDisplay() {
+  const count = cart.reduce((s,i)=>s+i.qty,0);
+  const total = cart.reduce((s,i)=>s+i.price*i.qty,0);
+  document.getElementById('storeState').textContent = `{ items: ${count}, total: ₹${total.toLocaleString()} }`;
+}
+
+function renderProducts() {
+  document.getElementById('productList').innerHTML = PRODUCTS.map(p => `
+    <div class="shop-item">
+      <div class="si-name">${p.name}</div>
+      <div class="si-price">₹${p.price.toLocaleString()}</div>
+      <div class="si-cat">${p.category}</div>
+      <button class="add-btn" onclick="addToCart(${p.id})">+ Add to Cart</button>
+    </div>`).join('');
+}
+
+function renderCart() {
+  const count = cart.reduce((s,i)=>s+i.qty,0);
+  document.getElementById('cartCount').textContent = count;
+  if (!cart.length) {
+    document.getElementById('cartItems').innerHTML = '<div class="empty-cart">Your cart is empty</div>';
+    document.getElementById('cartTotal').style.display = 'none';
+    return;
+  }
+  document.getElementById('cartItems').innerHTML = cart.map(item => `
+    <div class="cart-item">
+      <div class="ci-name">${item.name}</div>
+      <div class="qty-controls">
+        <button class="qty-btn" onclick="updateQty(${item.id},-1)">−</button>
+        <span class="qty-num">${item.qty}</span>
+        <button class="qty-btn" onclick="updateQty(${item.id},1)">+</button>
+      </div>
+      <div class="ci-price">₹${(item.price*item.qty).toLocaleString()}</div>
+    </div>`).join('');
+  const subtotal = cart.reduce((s,i)=>s+i.price*i.qty,0);
+  const gst = Math.round(subtotal * 0.18);
+  document.getElementById('subtotal').textContent = '₹'+subtotal.toLocaleString();
+  document.getElementById('gst').textContent = '₹'+gst.toLocaleString();
+  document.getElementById('grandTotal').textContent = '₹'+(subtotal+gst).toLocaleString();
+  document.getElementById('cartTotal').style.display = 'block';
+}
+
+function addToCart(id) {
+  const p = PRODUCTS.find(x=>x.id===id);
+  const existing = cart.find(x=>x.id===id);
+  if (existing) existing.qty++;
+  else cart.push({...p, qty:1});
+  saveCart(); renderCart();
+}
+
+function updateQty(id, delta) {
+  const item = cart.find(x=>x.id===id);
+  if (!item) return;
+  item.qty += delta;
+  if (item.qty <= 0) cart = cart.filter(x=>x.id!==id);
+  saveCart(); renderCart();
+}
+
+function checkout() {
+  alert('✅ Order placed! Cart cleared.\n(localStorage state reset)');
+  cart = []; saveCart(); renderCart();
+}
+
+renderProducts(); renderCart(); updateStoreDisplay();
+</script>
+</body>
+</html>

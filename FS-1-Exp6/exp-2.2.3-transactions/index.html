@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Exp 2.2.3 — Transaction System</title>
+<link rel="stylesheet" href="../lab.css">
+<style>
+  .accounts-grid { display:grid; grid-template-columns: repeat(auto-fit,minmax(160px,1fr)); gap:12px; margin-bottom:16px; }
+  .acc-card { background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.1); border-radius:10px; padding:14px; text-align:center; }
+  .acc-name { font-size:.78rem; color:#64748b; }
+  .acc-bal { font-size:1.4rem; font-weight:700; color:#34d399; margin:6px 0; transition:.4s; }
+  .acc-bal.flash-red { color:#f87171; }
+  .acc-bal.flash-green { color:#34d399; }
+  .txn-log { max-height:200px; overflow-y:auto; }
+  .txn-row { display:flex; justify-content:space-between; align-items:center; padding:10px 12px; border-radius:8px; margin-bottom:6px; font-size:.8rem; }
+  .txn-commit { background:rgba(52,211,153,.08); border-left:3px solid #34d399; }
+  .txn-rollback { background:rgba(248,113,113,.08); border-left:3px solid #f87171; }
+  .txn-pending { background:rgba(251,191,36,.08); border-left:3px solid #fbbf24; }
+  .txn-label { color:#e2e8f0; }
+  .txn-status { font-size:.72rem; font-weight:600; padding:2px 8px; border-radius:10px; }
+  .cs { background:rgba(52,211,153,.2); color:#34d399; }
+  .cr { background:rgba(248,113,113,.2); color:#f87171; }
+  .cp { background:rgba(251,191,36,.2); color:#fbbf24; }
+  .acid-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .acid-card { background:#0f172a; border-radius:10px; padding:14px; border:1px solid rgba(255,255,255,.06); }
+  .acid-letter { font-size:1.8rem; font-weight:800; color:#6366f1; }
+  .acid-word { font-size:.78rem; color:#a5b4fc; font-weight:600; }
+  .acid-desc { font-size:.75rem; color:#64748b; margin-top:6px; }
+  .session-status { display:flex; align-items:center; gap:8px; padding:10px; background:rgba(255,255,255,.03); border-radius:8px; margin-bottom:12px; font-size:.82rem; }
+  .dot { width:10px; height:10px; border-radius:50%; }
+  .dot-green { background:#34d399; box-shadow:0 0 6px #34d399; }
+  .dot-red { background:#f87171; }
+  .dot-yellow { background:#fbbf24; animation:pulse .8s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+</style>
+</head>
+<body>
+<div class="lab-container">
+  <a href="../index.html" class="back-btn">← Back to Hub</a>
+  <div class="lab-header">
+    <div class="exp-badge">Exp 2.2.3</div>
+    <h1>MongoDB Transaction System</h1>
+    <p>ACID Properties · Sessions · Atomicity · Rollback</p>
+  </div>
+
+  <!-- ACID Properties -->
+  <div class="lab-card">
+    <h2 class="card-title">⚗️ ACID Properties</h2>
+    <div class="acid-grid">
+      <div class="acid-card"><div class="acid-letter">A</div><div class="acid-word">Atomicity</div><div class="acid-desc">All operations succeed or all are rolled back. No partial updates.</div></div>
+      <div class="acid-card"><div class="acid-letter">C</div><div class="acid-word">Consistency</div><div class="acid-desc">Data remains in a valid state. Balance never goes negative.</div></div>
+      <div class="acid-card"><div class="acid-letter">I</div><div class="acid-word">Isolation</div><div class="acid-desc">Concurrent transactions don't interfere. MongoDB uses sessions.</div></div>
+      <div class="acid-card"><div class="acid-letter">D</div><div class="acid-word">Durability</div><div class="acid-desc">Committed transactions persist even after server crashes.</div></div>
+    </div>
+  </div>
+
+  <!-- Bank Accounts -->
+  <div class="lab-card">
+    <h2 class="card-title">🏦 Account Balances</h2>
+    <div class="accounts-grid" id="accounts"></div>
+
+    <div class="session-status">
+      <div class="dot" id="sessionDot" style="background:#64748b;"></div>
+      <span id="sessionText" style="color:#64748b;">No active session</span>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px;">
+      <select class="lab-input" id="fromAcc"><option>Alice</option><option>Bob</option><option>Carol</option></select>
+      <select class="lab-input" id="toAcc"><option>Bob</option><option>Alice</option><option>Carol</option></select>
+      <input class="lab-input" type="number" id="txnAmount" placeholder="Amount (₹)" value="500">
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+      <button class="lab-btn" onclick="runTransaction('commit')">✅ Transfer &amp; Commit</button>
+      <button class="lab-btn" style="background:rgba(248,113,113,.15);color:#f87171;border-color:rgba(248,113,113,.3);" onclick="runTransaction('rollback')">↩️ Transfer &amp; Rollback</button>
+      <button class="lab-btn" style="background:rgba(251,191,36,.15);color:#fbbf24;border-color:rgba(251,191,36,.3);" onclick="runTransaction('insufficient')">💸 Insufficient Funds</button>
+    </div>
+  </div>
+
+  <!-- Audit Log -->
+  <div class="lab-card">
+    <h2 class="card-title">📋 Audit Log</h2>
+    <div class="txn-log" id="txnLog">
+      <div style="color:#64748b;font-size:.8rem;text-align:center;padding:20px 0;">No transactions yet...</div>
+    </div>
+  </div>
+</div>
+
+<script>
+const balances = { Alice: 5000, Bob: 3000, Carol: 2000 };
+
+function renderAccounts() {
+  document.getElementById('accounts').innerHTML = Object.entries(balances).map(([name, bal]) =>
+    `<div class="acc-card"><div class="acc-name">${name}</div><div class="acc-bal" id="bal-${name}">₹${bal.toLocaleString()}</div></div>`
+  ).join('');
+}
+
+function addLog(type, msg, amount, txnId) {
+  const log = document.getElementById('txnLog');
+  const cls = type === 'commit' ? 'txn-commit' : type === 'rollback' ? 'txn-rollback' : 'txn-pending';
+  const sCls = type === 'commit' ? 'cs' : type === 'rollback' ? 'cr' : 'cp';
+  const label = type === 'commit' ? 'COMMITTED' : type === 'rollback' ? 'ROLLED BACK' : 'ABORTED';
+  const time = new Date().toLocaleTimeString();
+  const row = document.createElement('div');
+  row.className = `txn-row ${cls}`;
+  row.innerHTML = `<span class="txn-label">[${time}] ${msg} ${amount ? '₹'+amount : ''}</span><span class="txn-status ${sCls}">${label}</span>`;
+  if (log.querySelector('[style*="color:#64748b"]')) log.innerHTML = '';
+  log.insertBefore(row, log.firstChild);
+}
+
+function setSession(state) {
+  const dot = document.getElementById('sessionDot');
+  const txt = document.getElementById('sessionText');
+  if (state === 'active') { dot.className='dot dot-yellow'; txt.textContent='Session active — transaction in progress...'; txt.style.color='#fbbf24'; }
+  else if (state === 'done') { dot.className='dot dot-green'; txt.textContent='Session closed — transaction complete'; txt.style.color='#34d399'; }
+  else { dot.className='dot dot-red'; txt.textContent='Session aborted — rollback executed'; txt.style.color='#f87171'; }
+}
+
+function flashBalance(name, color) {
+  const el = document.getElementById('bal-'+name);
+  if (!el) return;
+  el.classList.add(`flash-${color}`);
+  setTimeout(() => el.classList.remove(`flash-${color}`), 800);
+}
+
+function runTransaction(mode) {
+  const from = document.getElementById('fromAcc').value;
+  const to = document.getElementById('toAcc').value;
+  const amt = parseInt(document.getElementById('txnAmount').value) || 500;
+  const txnId = 'TXN-' + Math.random().toString(36).substring(2,8).toUpperCase();
+
+  if (from === to) { alert('Cannot transfer to same account'); return; }
+
+  setSession('active');
+
+  setTimeout(() => {
+    if (mode === 'insufficient' || balances[from] < amt) {
+      setSession('error');
+      addLog('pending', `${from} → ${to} (Insufficient funds — balance ₹${balances[from]})`, null, txnId);
+      return;
+    }
+    if (mode === 'rollback') {
+      setSession('error');
+      addLog('rollback', `${from} → ${to} | Simulated failure — balances unchanged`, amt, txnId);
+      return;
+    }
+    // Commit
+    balances[from] -= amt;
+    balances[to] += amt;
+    document.getElementById('bal-'+from).textContent = '₹' + balances[from].toLocaleString();
+    document.getElementById('bal-'+to).textContent = '₹' + balances[to].toLocaleString();
+    flashBalance(from, 'red');
+    flashBalance(to, 'green');
+    setSession('done');
+    addLog('commit', `${from} → ${to}`, amt, txnId);
+  }, 1200);
+}
+
+renderAccounts();
+</script>
+</body>
+</html>

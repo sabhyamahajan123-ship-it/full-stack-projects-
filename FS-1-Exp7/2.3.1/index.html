@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Exp 2.3.1 — React + Axios Product API</title>
+<link rel="stylesheet" href="../lab.css">
+<style>
+  .product-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:14px; }
+  .prod-card { background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.08); border-radius:12px; padding:16px; transition:.3s; }
+  .prod-card:hover { border-color:rgba(99,102,241,.4); transform:translateY(-3px); }
+  .prod-name { font-weight:600; color:#e2e8f0; font-size:.9rem; }
+  .prod-price { color:#34d399; font-size:1.1rem; font-weight:700; margin:6px 0; }
+  .prod-cat { font-size:.72rem; color:#64748b; background:rgba(255,255,255,.05); padding:2px 8px; border-radius:10px; display:inline-block; }
+  .prod-del { background:rgba(248,113,113,.1); color:#f87171; border:1px solid rgba(248,113,113,.2); border-radius:8px; padding:4px 10px; font-size:.75rem; cursor:pointer; margin-top:10px; width:100%; transition:.2s; }
+  .prod-del:hover { background:rgba(248,113,113,.25); }
+  .spinner { display:inline-block; width:20px; height:20px; border:3px solid rgba(99,102,241,.3); border-top-color:#6366f1; border-radius:50%; animation:spin .8s linear infinite; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  .axios-log { background:#0a0a0a; border:1px solid #1e293b; border-radius:10px; padding:14px; font-family:monospace; font-size:.76rem; max-height:140px; overflow-y:auto; }
+  .al { margin:3px 0; }
+  .al-get { color:#38bdf8; }
+  .al-post { color:#a5b4fc; }
+  .al-del { color:#f87171; }
+  .al-ok { color:#34d399; }
+  .empty-state { text-align:center; padding:30px; color:#64748b; }
+</style>
+</head>
+<body>
+<div class="lab-container">
+  <a href="../index.html" class="back-btn">← Back to Hub</a>
+  <div class="lab-header">
+    <div class="exp-badge">Exp 2.3.1</div>
+    <h1>React + Axios Product API</h1>
+    <p>GET · POST · DELETE with loading states and error handling</p>
+  </div>
+
+  <!-- Add Product -->
+  <div class="lab-card">
+    <h2 class="card-title">➕ POST /api/products</h2>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+      <input id="pName" class="lab-input" placeholder="Product name" style="flex:2;min-width:140px;">
+      <input id="pPrice" class="lab-input" type="number" placeholder="Price (₹)" style="flex:1;min-width:100px;">
+      <select id="pCat" class="lab-input" style="flex:1;min-width:120px;">
+        <option>Electronics</option><option>Clothing</option><option>Books</option><option>Home</option><option>Sports</option>
+      </select>
+      <button class="lab-btn" onclick="addProduct()">Add Product</button>
+    </div>
+  </div>
+
+  <!-- Axios Interceptor Log -->
+  <div class="lab-card">
+    <h2 class="card-title">📡 Axios Request Log</h2>
+    <div class="axios-log" id="axiosLog">
+      <div class="al al-ok">// Axios instance initialized with baseURL: http://localhost:5000</div>
+    </div>
+  </div>
+
+  <!-- Products -->
+  <div class="lab-card">
+    <h2 class="card-title">📦 GET /api/products <span id="loadSpinner" style="display:none"><span class="spinner"></span></span></h2>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+      <span id="productCount" style="color:#64748b;font-size:.8rem;">Loading...</span>
+      <button class="lab-btn" onclick="fetchProducts()" style="padding:6px 16px;font-size:.8rem;">↻ Refresh</button>
+    </div>
+    <div class="product-grid" id="productGrid"></div>
+  </div>
+</div>
+
+<script>
+const SEED = [
+  {id:1,name:'Wireless Headphones',price:2999,category:'Electronics'},
+  {id:2,name:'React T-Shirt',price:499,category:'Clothing'},
+  {id:3,name:'Node.js Handbook',price:799,category:'Books'},
+  {id:4,name:'Mechanical Keyboard',price:4500,category:'Electronics'},
+  {id:5,name:'Yoga Mat',price:899,category:'Sports'},
+];
+let products = JSON.parse(localStorage.getItem('exp231_products') || 'null') || [...SEED];
+let nextId = Math.max(...products.map(p=>p.id)) + 1;
+
+function save() { localStorage.setItem('exp231_products', JSON.stringify(products)); }
+
+function log(type, msg) {
+  const el = document.getElementById('axiosLog');
+  const d = document.createElement('div');
+  d.className = `al al-${type}`;
+  d.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+  el.appendChild(d);
+  el.scrollTop = el.scrollHeight;
+}
+
+function showSpinner(show) {
+  document.getElementById('loadSpinner').style.display = show ? 'inline-block' : 'none';
+}
+
+function fetchProducts() {
+  showSpinner(true);
+  log('get', 'GET /api/products → Request sent');
+  setTimeout(() => {
+    showSpinner(false);
+    log('ok', `Response 200 OK — ${products.length} products received`);
+    renderProducts();
+  }, 600);
+}
+
+function renderProducts() {
+  const grid = document.getElementById('productGrid');
+  document.getElementById('productCount').textContent = `${products.length} products`;
+  if (!products.length) { grid.innerHTML = '<div class="empty-state">No products. Add one above!</div>'; return; }
+  grid.innerHTML = products.map(p => `
+    <div class="prod-card" id="pc-${p.id}">
+      <div class="prod-name">${p.name}</div>
+      <div class="prod-price">₹${p.price.toLocaleString()}</div>
+      <div class="prod-cat">${p.category}</div>
+      <button class="prod-del" onclick="deleteProduct(${p.id})">🗑 Delete</button>
+    </div>`).join('');
+}
+
+function addProduct() {
+  const name = document.getElementById('pName').value.trim();
+  const price = parseInt(document.getElementById('pPrice').value) || 0;
+  const category = document.getElementById('pCat').value;
+  if (!name) { alert('Product name required'); return; }
+  log('post', `POST /api/products { name: "${name}", price: ${price} }`);
+  setTimeout(() => {
+    const p = {id: nextId++, name, price, category};
+    products.push(p);
+    save();
+    log('ok', `Response 201 Created — Product ID: ${p.id}`);
+    renderProducts();
+    document.getElementById('pName').value = '';
+    document.getElementById('pPrice').value = '';
+  }, 400);
+}
+
+function deleteProduct(id) {
+  log('del', `DELETE /api/products/${id}`);
+  const card = document.getElementById('pc-'+id);
+  if (card) { card.style.opacity='0.3'; card.style.transition='.3s'; }
+  setTimeout(() => {
+    products = products.filter(p => p.id !== id);
+    save();
+    log('ok', `Response 200 OK — Product ${id} deleted`);
+    renderProducts();
+  }, 400);
+}
+
+fetchProducts();
+</script>
+</body>
+</html>

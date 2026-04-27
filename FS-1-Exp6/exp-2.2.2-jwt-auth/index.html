@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Exp 2.2.2 — JWT Banking Auth</title>
+<link rel="stylesheet" href="../lab.css">
+<style>
+  .auth-panels { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  .panel { background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); border-radius:12px; padding:20px; }
+  .panel h3 { color:#a5b4fc; font-size:.95rem; margin-bottom:14px; }
+  .token-info { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:12px; }
+  .ti { background:#0f172a; border-radius:8px; padding:10px; text-align:center; }
+  .ti-label { font-size:.7rem; color:#64748b; }
+  .ti-val { font-size:.88rem; color:#e2e8f0; font-weight:600; margin-top:2px; }
+  .route-test { margin-top:10px; }
+  .route-row { display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid rgba(255,255,255,.05); }
+  .route-row:last-child { border-bottom:none; }
+  .route-name { font-family:monospace; font-size:.8rem; color:#94a3b8; flex:1; }
+  .route-status { font-size:.75rem; font-weight:600; padding:3px 10px; border-radius:20px; }
+  .locked { background:rgba(248,113,113,.15); color:#f87171; }
+  .unlocked { background:rgba(52,211,153,.15); color:#34d399; }
+  .progress-bar { height:4px; background:#1e293b; border-radius:4px; overflow:hidden; margin-top:8px; }
+  .progress-fill { height:100%; background:linear-gradient(90deg,#6366f1,#818cf8); border-radius:4px; transition:width 1s ease; }
+  .token-chip { background:rgba(99,102,241,.15); border:1px solid rgba(99,102,241,.3); border-radius:6px; padding:6px 10px; font-size:.72rem; font-family:monospace; color:#a5b4fc; word-break:break-all; margin-top:8px; }
+  .bcrypt-demo { background:#0a0a0a; border-radius:8px; padding:14px; margin-top:10px; font-size:.78rem; font-family:monospace; }
+  .bcrypt-row { margin:4px 0; }
+  .bc-label { color:#64748b; }
+  .bc-val { color:#34d399; }
+  .revoked { text-decoration:line-through; opacity:.5; }
+</style>
+</head>
+<body>
+<div class="lab-container">
+  <a href="../index.html" class="back-btn">← Back to Hub</a>
+  <div class="lab-header">
+    <div class="exp-badge">Exp 2.2.2</div>
+    <h1>JWT Banking Authentication</h1>
+    <p>bcrypt · Access Token · Refresh Token · Protected Routes</p>
+  </div>
+
+  <!-- Login / Register -->
+  <div class="auth-panels">
+    <div class="panel">
+      <h3>🔐 User Login</h3>
+      <input id="lu" class="lab-input" placeholder="Username" value="admin" style="width:100%;margin-bottom:8px;">
+      <input id="lp" class="lab-input" type="password" placeholder="Password" value="password123" style="width:100%;margin-bottom:8px;">
+      <button class="lab-btn" onclick="doJwtLogin()" style="width:100%;">Login & Get Tokens</button>
+      <div style="margin-top:10px;font-size:.75rem;color:#64748b;">Credentials: admin / password123 &nbsp;|&nbsp; user / user123</div>
+    </div>
+    <div class="panel">
+      <h3>🏦 bcrypt Password Hashing</h3>
+      <input id="hashInput" class="lab-input" placeholder="Type a password..." style="width:100%;margin-bottom:8px;">
+      <button class="lab-btn" onclick="doBcrypt()" style="width:100%;">Hash with bcrypt (rounds=10)</button>
+      <div class="bcrypt-demo" id="bcryptDemo">
+        <div class="bcrypt-row"><span class="bc-label">Plain: </span><span class="bc-val" id="bcPlain">—</span></div>
+        <div class="bcrypt-row"><span class="bc-label">Hash: &nbsp;</span><span class="bc-val" id="bcHash" style="word-break:break-all;">—</span></div>
+        <div class="bcrypt-row"><span class="bc-label">Match: </span><span class="bc-val" id="bcMatch">—</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Token Display -->
+  <div class="lab-card" id="jwtCard" style="display:none">
+    <h2 class="card-title">✅ Authentication Successful</h2>
+    <div class="token-info">
+      <div class="ti"><div class="ti-label">User</div><div class="ti-val" id="tokUser">—</div></div>
+      <div class="ti"><div class="ti-label">Role</div><div class="ti-val" id="tokRole">—</div></div>
+      <div class="ti"><div class="ti-label">Access Token Expires</div><div class="ti-val" id="tokExp">15 min</div></div>
+      <div class="ti"><div class="ti-label">Refresh Token Expires</div><div class="ti-val">7 days</div></div>
+    </div>
+    <div style="margin-top:12px;font-size:.8rem;color:#64748b;">Access Token (JWT):</div>
+    <div class="token-chip" id="accessToken"></div>
+    <div style="margin-top:8px;font-size:.8rem;color:#64748b;">Refresh Token:</div>
+    <div class="token-chip" id="refreshToken" style="color:#f59e0b;border-color:rgba(245,158,11,.3);background:rgba(245,158,11,.08);"></div>
+    <div class="progress-bar" style="margin-top:12px;"><div class="progress-fill" id="tokenProg" style="width:100%"></div></div>
+    <div style="font-size:.72rem;color:#64748b;margin-top:4px;" id="tokenTimer">Token expires in 15:00</div>
+  </div>
+
+  <!-- Protected Routes -->
+  <div class="lab-card">
+    <h2 class="card-title">🛡️ Protected Route Tester</h2>
+    <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
+      <button class="lab-btn" onclick="testRoutes('valid')">✅ Test with Valid Token</button>
+      <button class="lab-btn" style="background:rgba(248,113,113,.15);color:#f87171;border-color:rgba(248,113,113,.3);" onclick="testRoutes('none')">🚫 No Token</button>
+      <button class="lab-btn" style="background:rgba(251,191,36,.15);color:#fbbf24;border-color:rgba(251,191,36,.3);" onclick="testRoutes('expired')">⏰ Expired Token</button>
+    </div>
+    <div id="routeResults">
+      <div class="route-row"><span class="route-name">GET /api/balance</span><span class="route-status locked">Locked</span></div>
+      <div class="route-row"><span class="route-name">GET /api/transactions</span><span class="route-status locked">Locked</span></div>
+      <div class="route-row"><span class="route-name">POST /api/transfer</span><span class="route-status locked">Locked</span></div>
+      <div class="route-row"><span class="route-name">GET /api/admin/users</span><span class="route-status locked">Locked</span></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const USERS = { admin:{pass:'password123',role:'admin'}, user:{pass:'user123',role:'user'} };
+let currentRole = null, timerInterval = null;
+
+function fakeBcrypt(str) {
+  const salt = '$2b$10$' + Math.random().toString(36).substring(2,12) + Math.random().toString(36).substring(2,12);
+  const hash = btoa(str + salt).replace(/[^a-zA-Z0-9$./]/g,'').substring(0,31);
+  return salt + hash;
+}
+
+function makeJWT(user, role, mins) {
+  const h = btoa(JSON.stringify({alg:'HS256',typ:'JWT'})).replace(/=/g,'');
+  const p = btoa(JSON.stringify({sub:user,role,iat:Math.floor(Date.now()/1000),exp:Math.floor(Date.now()/1000)+mins*60})).replace(/=/g,'');
+  const s = btoa(user+role+Date.now()).replace(/=/g,'').substring(0,20);
+  return `${h}.${p}.${s}`;
+}
+
+function doBcrypt() {
+  const v = document.getElementById('hashInput').value || 'password123';
+  document.getElementById('bcPlain').textContent = v;
+  document.getElementById('bcHash').textContent = '⏳ Hashing...';
+  document.getElementById('bcMatch').textContent = '...';
+  setTimeout(() => {
+    const h = fakeBcrypt(v);
+    document.getElementById('bcHash').textContent = h;
+    document.getElementById('bcMatch').textContent = '✅ true (bcrypt.compare)';
+  }, 800);
+}
+
+function doJwtLogin() {
+  const u = document.getElementById('lu').value;
+  const p = document.getElementById('lp').value;
+  const userData = USERS[u];
+  if (!userData || userData.pass !== p) {
+    alert('❌ 401 — Invalid credentials'); return;
+  }
+  currentRole = userData.role;
+  document.getElementById('tokUser').textContent = u;
+  document.getElementById('tokRole').textContent = userData.role.toUpperCase();
+  document.getElementById('accessToken').textContent = makeJWT(u, userData.role, 15);
+  document.getElementById('refreshToken').textContent = makeJWT(u, userData.role, 10080);
+  document.getElementById('jwtCard').style.display = 'block';
+  startTokenTimer();
+}
+
+function startTokenTimer() {
+  let secs = 900;
+  if (timerInterval) clearInterval(timerInterval);
+  timerInterval = setInterval(() => {
+    secs--;
+    const m = String(Math.floor(secs/60)).padStart(2,'0');
+    const s = String(secs%60).padStart(2,'0');
+    document.getElementById('tokenTimer').textContent = `Token expires in ${m}:${s}`;
+    document.getElementById('tokenProg').style.width = (secs/900*100)+'%';
+    if (secs <= 0) clearInterval(timerInterval);
+  }, 1000);
+}
+
+function testRoutes(mode) {
+  const routes = [
+    {name:'GET /api/balance', adminOnly:false},
+    {name:'GET /api/transactions', adminOnly:false},
+    {name:'POST /api/transfer', adminOnly:false},
+    {name:'GET /api/admin/users', adminOnly:true}
+  ];
+  const html = routes.map(r => {
+    let status, cls;
+    if (mode === 'none')    { status='401 Unauthorized'; cls='locked'; }
+    else if (mode === 'expired') { status='403 Token Expired'; cls='locked'; }
+    else if (r.adminOnly && currentRole !== 'admin') { status='403 Forbidden'; cls='locked'; }
+    else { status='200 OK'; cls='unlocked'; }
+    return `<div class="route-row"><span class="route-name">${r.name}</span><span class="route-status ${cls}">${status}</span></div>`;
+  }).join('');
+  document.getElementById('routeResults').innerHTML = html;
+}
+</script>
+</body>
+</html>

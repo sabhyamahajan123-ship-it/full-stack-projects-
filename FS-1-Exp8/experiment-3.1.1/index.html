@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Exp 3.1.1 — React Login Form</title>
+<link rel="stylesheet" href="../lab.css">
+<style>
+  .login-box { max-width:440px; margin:0 auto; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.1); border-radius:20px; padding:36px; }
+  .login-logo { text-align:center; font-size:2.5rem; margin-bottom:8px; }
+  .login-title { text-align:center; font-size:1.3rem; font-weight:700; color:#e2e8f0; margin-bottom:4px; }
+  .login-sub { text-align:center; color:#64748b; font-size:.85rem; margin-bottom:28px; }
+  .field-group { margin-bottom:18px; }
+  .field-label { display:block; font-size:.8rem; color:#94a3b8; font-weight:600; margin-bottom:6px; }
+  .field-input { width:100%; background:rgba(255,255,255,.05); border:1.5px solid rgba(255,255,255,.1); color:#e2e8f0; border-radius:10px; padding:11px 14px; font-size:.9rem; outline:none; transition:.2s; box-sizing:border-box; font-family:inherit; }
+  .field-input:focus { border-color:rgba(99,102,241,.6); background:rgba(99,102,241,.05); }
+  .field-input.error { border-color:rgba(248,113,113,.6); }
+  .field-error { font-size:.75rem; color:#f87171; margin-top:5px; }
+  .submit-btn { width:100%; background:linear-gradient(135deg,#6366f1,#8b5cf6); color:#fff; border:none; border-radius:10px; padding:13px; font-size:.95rem; font-weight:700; cursor:pointer; transition:.2s; margin-top:8px; }
+  .submit-btn:hover { opacity:.85; }
+  .submit-btn:disabled { opacity:.5; cursor:not-allowed; }
+  .form-state { text-align:center; margin-top:16px; font-size:.82rem; min-height:22px; }
+  .state-success { color:#34d399; }
+  .state-error { color:#f87171; }
+  .creds-hint { background:rgba(99,102,241,.08); border:1px dashed rgba(99,102,241,.3); border-radius:8px; padding:10px 14px; font-size:.78rem; color:#94a3b8; margin-bottom:20px; }
+  .validation-list { margin-top:12px; }
+  .vr { display:flex; align-items:center; gap:6px; font-size:.78rem; padding:3px 0; }
+  .vr-ok { color:#34d399; }
+  .vr-no { color:#64748b; }
+  .session-bar { background:rgba(52,211,153,.08); border:1px solid rgba(52,211,153,.2); border-radius:12px; padding:16px; text-align:center; display:none; }
+  .sb-name { font-size:1.1rem; font-weight:700; color:#34d399; margin-bottom:4px; }
+  .sb-meta { font-size:.78rem; color:#64748b; }
+  .logout-btn { background:rgba(248,113,113,.1); color:#f87171; border:1px solid rgba(248,113,113,.2); border-radius:8px; padding:6px 20px; cursor:pointer; margin-top:10px; transition:.2s; }
+  .logout-btn:hover { background:rgba(248,113,113,.25); }
+</style>
+</head>
+<body>
+<div class="lab-container">
+  <a href="../index.html" class="back-btn">← Back to Hub</a>
+  <div class="lab-header">
+    <div class="exp-badge">Exp 3.1.1</div>
+    <h1>Login Form — React State</h1>
+    <p>React Hook Form · Material UI · Client-Side Validation</p>
+  </div>
+
+  <!-- Session Info -->
+  <div class="session-bar" id="sessionBar">
+    <div class="sb-name" id="sessionName"></div>
+    <div class="sb-meta" id="sessionMeta"></div>
+    <div><button class="logout-btn" onclick="logout()">Logout</button></div>
+  </div>
+
+  <!-- Login Form -->
+  <div class="login-box" id="loginBox">
+    <div class="login-logo">🔐</div>
+    <div class="login-title">Welcome Back</div>
+    <div class="login-sub">Sign in to your account</div>
+
+    <div class="creds-hint">
+      📋 Test credentials: <strong>admin@test.com</strong> / <strong>password123</strong>
+    </div>
+
+    <div class="field-group">
+      <label class="field-label">Email Address</label>
+      <input id="email" class="field-input" type="email" placeholder="you@example.com" oninput="validate()">
+      <div class="field-error" id="emailErr"></div>
+    </div>
+
+    <div class="field-group">
+      <label class="field-label">Password</label>
+      <input id="password" class="field-input" type="password" placeholder="••••••••" oninput="validate()" onkeydown="if(event.key==='Enter')doLogin()">
+      <div class="field-error" id="passErr"></div>
+      <div class="validation-list" id="valList">
+        <div class="vr vr-no" id="v-len">○ Minimum 8 characters</div>
+        <div class="vr vr-no" id="v-num">○ Contains a number</div>
+        <div class="vr vr-no" id="v-upper">○ Contains uppercase letter</div>
+      </div>
+    </div>
+
+    <button class="submit-btn" id="submitBtn" onclick="doLogin()" disabled>Sign In</button>
+    <div class="form-state" id="formState"></div>
+  </div>
+</div>
+
+<script>
+const VALID_CREDS = [
+  {email:'admin@test.com', pass:'password123', name:'Admin User', role:'Administrator'},
+  {email:'user@test.com',  pass:'User@1234',   name:'John Doe',   role:'Standard User'},
+];
+
+function validate() {
+  const e = document.getElementById('email').value;
+  const p = document.getElementById('password').value;
+  let valid = true;
+
+  // Email
+  const eErr = document.getElementById('emailErr');
+  if (e && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) { eErr.textContent = 'Invalid email format'; document.getElementById('email').classList.add('error'); valid=false; }
+  else { eErr.textContent=''; document.getElementById('email').classList.remove('error'); }
+
+  // Password rules
+  const vLen = p.length >= 8;
+  const vNum = /\d/.test(p);
+  const vUpper = /[A-Z]/.test(p);
+
+  setRule('v-len', vLen); setRule('v-num', vNum); setRule('v-upper', vUpper);
+
+  if (!vLen || !vNum || !vUpper) valid = false;
+  if (!e) valid = false;
+
+  document.getElementById('submitBtn').disabled = !valid;
+  return valid;
+}
+
+function setRule(id, ok) {
+  const el = document.getElementById(id);
+  el.className = `vr ${ok ? 'vr-ok' : 'vr-no'}`;
+  el.textContent = (ok ? '✓ ' : '○ ') + el.textContent.replace(/^[✓○] /, '');
+}
+
+function doLogin() {
+  if (!validate()) return;
+  const e = document.getElementById('email').value;
+  const p = document.getElementById('password').value;
+  const state = document.getElementById('formState');
+  const btn = document.getElementById('submitBtn');
+
+  btn.disabled = true;
+  btn.textContent = 'Signing in...';
+  state.textContent = '';
+
+  setTimeout(() => {
+    const user = VALID_CREDS.find(u => u.email === e && u.pass === p);
+    if (user) {
+      state.className = 'form-state state-success';
+      state.textContent = '✅ Authentication successful!';
+      setTimeout(() => showSession(user), 500);
+    } else {
+      state.className = 'form-state state-error';
+      state.textContent = '❌ Invalid email or password';
+      btn.disabled = false;
+      btn.textContent = 'Sign In';
+    }
+  }, 700);
+}
+
+function showSession(user) {
+  document.getElementById('loginBox').style.display = 'none';
+  const bar = document.getElementById('sessionBar');
+  bar.style.display = 'block';
+  document.getElementById('sessionName').textContent = `👤 ${user.name}`;
+  document.getElementById('sessionMeta').textContent = `Role: ${user.role}  ·  Logged in at ${new Date().toLocaleTimeString()}  ·  Session active`;
+}
+
+function logout() {
+  document.getElementById('sessionBar').style.display = 'none';
+  document.getElementById('loginBox').style.display = 'block';
+  document.getElementById('email').value = '';
+  document.getElementById('password').value = '';
+  document.getElementById('formState').textContent = '';
+  document.getElementById('submitBtn').disabled = true;
+  document.getElementById('submitBtn').textContent = 'Sign In';
+  ['v-len','v-num','v-upper'].forEach(id => {
+    const el = document.getElementById(id);
+    el.className = 'vr vr-no';
+    el.textContent = el.textContent.replace(/^[✓○] /, '○ ');
+  });
+}
+</script>
+</body>
+</html>

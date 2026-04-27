@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Exp 2.3.3 — Real-Time Chat</title>
+<link rel="stylesheet" href="../lab.css">
+<style>
+  .chat-layout { display:grid; grid-template-columns:220px 1fr; gap:0; border:1px solid rgba(255,255,255,.08); border-radius:16px; overflow:hidden; min-height:420px; }
+  .sidebar { background:rgba(255,255,255,.03); border-right:1px solid rgba(255,255,255,.08); padding:16px; }
+  .sidebar h4 { font-size:.78rem; color:#64748b; text-transform:uppercase; letter-spacing:.08em; margin-bottom:12px; }
+  .user-item { display:flex; align-items:center; gap:8px; padding:6px 0; }
+  .avatar { width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:.72rem; font-weight:700; color:#fff; flex-shrink:0; }
+  .user-name { font-size:.82rem; color:#e2e8f0; }
+  .online-dot { width:7px; height:7px; border-radius:50%; background:#34d399; margin-left:auto; box-shadow:0 0 5px #34d399; }
+  .chat-main { display:flex; flex-direction:column; }
+  .chat-header { padding:14px 16px; border-bottom:1px solid rgba(255,255,255,.06); display:flex; align-items:center; gap:10px; }
+  .socket-status { font-size:.72rem; color:#34d399; background:rgba(52,211,153,.1); padding:2px 8px; border-radius:10px; }
+  .messages { flex:1; overflow-y:auto; padding:16px; display:flex; flex-direction:column; gap:10px; min-height:260px; max-height:260px; }
+  .msg { max-width:75%; }
+  .msg.own { align-self:flex-end; }
+  .msg.other { align-self:flex-start; }
+  .msg-name { font-size:.7rem; color:#64748b; margin-bottom:3px; }
+  .msg-bubble { padding:8px 12px; border-radius:12px; font-size:.84rem; line-height:1.4; }
+  .msg.own .msg-bubble { background:rgba(99,102,241,.3); color:#e2e8f0; border-radius:12px 12px 3px 12px; }
+  .msg.other .msg-bubble { background:rgba(255,255,255,.07); color:#e2e8f0; border-radius:12px 12px 12px 3px; }
+  .msg-time { font-size:.68rem; color:#64748b; margin-top:3px; text-align:right; }
+  .msg.other .msg-time { text-align:left; }
+  .system-msg { text-align:center; font-size:.75rem; color:#64748b; padding:4px 0; font-style:italic; }
+  .typing-indicator { font-size:.75rem; color:#64748b; padding:0 16px 8px; min-height:22px; }
+  .typing-dots span { display:inline-block; width:5px; height:5px; border-radius:50%; background:#64748b; animation:bounce .8s infinite; margin:0 1px; }
+  .typing-dots span:nth-child(2){animation-delay:.15s}
+  .typing-dots span:nth-child(3){animation-delay:.3s}
+  @keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+  .chat-input-area { padding:12px 16px; border-top:1px solid rgba(255,255,255,.06); display:flex; gap:8px; }
+  .chat-input { background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.1); color:#e2e8f0; border-radius:8px; padding:8px 14px; font-size:.85rem; flex:1; outline:none; font-family:inherit; }
+  .chat-input:focus { border-color:rgba(99,102,241,.5); }
+  .send-btn { background:rgba(99,102,241,.3); color:#a5b4fc; border:1px solid rgba(99,102,241,.4); border-radius:8px; padding:8px 16px; cursor:pointer; font-weight:600; transition:.2s; }
+  .send-btn:hover { background:rgba(99,102,241,.5); color:#fff; }
+  .join-overlay { position:absolute; inset:0; background:rgba(3,7,18,.9); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; border-radius:16px; z-index:10; }
+  .chat-wrap { position:relative; }
+</style>
+</head>
+<body>
+<div class="lab-container">
+  <a href="../index.html" class="back-btn">← Back to Hub</a>
+  <div class="lab-header">
+    <div class="exp-badge">Exp 2.3.3</div>
+    <h1>Real-Time Chat — Socket.IO</h1>
+    <p>WebSocket simulator with typing indicators, online users & message history</p>
+  </div>
+
+  <div class="lab-card chat-wrap">
+    <!-- Join Overlay -->
+    <div class="join-overlay" id="joinOverlay">
+      <div style="font-size:1.5rem;font-weight:700;color:#e2e8f0;">Join the Chat</div>
+      <div style="color:#64748b;font-size:.88rem;">Enter a username to connect</div>
+      <input id="usernameInput" class="lab-input" placeholder="Your username..." style="width:260px;text-align:center;" maxlength="16">
+      <button class="lab-btn" onclick="joinChat()">Connect →</button>
+    </div>
+
+    <div class="chat-layout">
+      <!-- Sidebar -->
+      <div class="sidebar">
+        <h4>Online (<span id="onlineCount">0</span>)</h4>
+        <div id="userList"></div>
+      </div>
+      <!-- Chat Main -->
+      <div class="chat-main">
+        <div class="chat-header">
+          <div>
+            <div style="font-weight:600;font-size:.9rem;">General Chat</div>
+            <div style="font-size:.72rem;color:#64748b;">Socket.IO Room</div>
+          </div>
+          <div style="margin-left:auto;"><span class="socket-status" id="socketStatus">● Disconnected</span></div>
+        </div>
+        <div class="messages" id="messages"></div>
+        <div class="typing-indicator" id="typingIndicator"></div>
+        <div class="chat-input-area">
+          <input class="chat-input" id="msgInput" placeholder="Type a message..." maxlength="200" onkeydown="handleKey(event)" oninput="handleTyping()">
+          <button class="send-btn" onclick="sendMessage()">Send</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const COLORS = ['#6366f1','#ec4899','#f59e0b','#10b981','#3b82f6','#8b5cf6'];
+const BOT_USERS = ['Alice','Bob','Carol','Dave'];
+const BOT_MSGS = [
+  'Hey everyone! 👋','Working on the Socket.IO integration','This real-time chat is so cool!',
+  'Did you check the Redux example?','The typing indicator works great','Anyone free for a code review?',
+  'Just pushed to GitHub 🚀','The MongoDB transactions lab is interesting','Love the glassmorphism UI'
+];
+
+let myName = '', myColor = '', botInterval = null, typingTimeout = null;
+const joinedBots = new Set();
+
+function colorFor(name) { return COLORS[name.length % COLORS.length]; }
+function initials(name) { return name.substring(0,2).toUpperCase(); }
+function now() { return new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}); }
+
+function joinChat() {
+  const name = document.getElementById('usernameInput').value.trim();
+  if (!name) { alert('Please enter a username'); return; }
+  myName = name;
+  myColor = colorFor(name);
+  document.getElementById('joinOverlay').style.display = 'none';
+  document.getElementById('socketStatus').textContent = '● Connected';
+  document.getElementById('socketStatus').style.color = '#34d399';
+  document.getElementById('socketStatus').style.background = 'rgba(52,211,153,.1)';
+  addSystemMsg(`${myName} joined the room`);
+
+  // Add some bots gradually
+  setTimeout(() => joinBot(BOT_USERS[0]), 800);
+  setTimeout(() => joinBot(BOT_USERS[1]), 2000);
+  setTimeout(() => joinBot(BOT_USERS[2]), 4000);
+
+  renderUsers();
+  startBotMessages();
+}
+
+function joinBot(name) {
+  joinedBots.add(name);
+  addSystemMsg(`${name} joined the room`);
+  renderUsers();
+}
+
+function renderUsers() {
+  const all = [myName, ...Array.from(joinedBots)];
+  document.getElementById('onlineCount').textContent = all.length;
+  document.getElementById('userList').innerHTML = all.map(n =>
+    `<div class="user-item"><div class="avatar" style="background:${colorFor(n)}">${initials(n)}</div><div class="user-name">${n}${n===myName?' (you)':''}</div><div class="online-dot"></div></div>`
+  ).join('');
+}
+
+function addMsg(sender, text, isOwn) {
+  const el = document.getElementById('messages');
+  const div = document.createElement('div');
+  div.className = `msg ${isOwn ? 'own' : 'other'}`;
+  div.innerHTML = `
+    ${!isOwn ? `<div class="msg-name">${sender}</div>` : ''}
+    <div class="msg-bubble">${text}</div>
+    <div class="msg-time">${now()}</div>`;
+  el.appendChild(div);
+  el.scrollTop = el.scrollHeight;
+}
+
+function addSystemMsg(text) {
+  const el = document.getElementById('messages');
+  const div = document.createElement('div');
+  div.className = 'system-msg';
+  div.textContent = text;
+  el.appendChild(div);
+  el.scrollTop = el.scrollHeight;
+}
+
+function sendMessage() {
+  const input = document.getElementById('msgInput');
+  const text = input.value.trim();
+  if (!text || !myName) return;
+  addMsg(myName, text, true);
+  input.value = '';
+  clearTypingIndicator();
+}
+
+function handleKey(e) { if (e.key === 'Enter') sendMessage(); }
+
+function handleTyping() {
+  if (!myName) return;
+  clearTimeout(typingTimeout);
+  typingTimeout = setTimeout(clearTypingIndicator, 1500);
+}
+
+function clearTypingIndicator() {
+  document.getElementById('typingIndicator').innerHTML = '';
+}
+
+function startBotMessages() {
+  botInterval = setInterval(() => {
+    const bots = Array.from(joinedBots);
+    if (!bots.length) return;
+    const bot = bots[Math.floor(Math.random() * bots.length)];
+    const msg = BOT_MSGS[Math.floor(Math.random() * BOT_MSGS.length)];
+
+    // Show typing indicator
+    document.getElementById('typingIndicator').innerHTML =
+      `<span style="color:#94a3b8">${bot} is typing</span> <span class="typing-dots"><span></span><span></span><span></span></span>`;
+
+    setTimeout(() => {
+      clearTypingIndicator();
+      addMsg(bot, msg, false);
+    }, Math.random() * 1200 + 600);
+  }, 4000);
+}
+</script>
+</body>
+</html>
